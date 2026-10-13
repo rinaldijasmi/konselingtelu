@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#c41230">
+    <meta name="description" content="Preview dashboard admin layanan konseling Telkom University.">
+    <title>Dashboard Admin — Konseling Telkom University</title>
+    <link rel="stylesheet" href="assets/css/admin.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <img src="assets/telkom-university-logo.png" alt="Telkom University">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="product-name">Layanan Konseling</span>
+      </div>
+      <div class="header-actions">
+        <span class="preview-chip">Pratinjau admin</span>
+        <button class="icon-button" id="notificationButton" type="button" aria-label="Notifikasi" title="Notifikasi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12h4"/></svg><span class="notification-dot"></span>
+        </button>
+        <div class="user-menu"><div class="avatar" aria-hidden="true">AD</div><div class="user-copy"><span class="user-name" id="signedInAdmin">Admin Konseling</span><span class="user-role" id="signedInRole">Administrator</span></div><button class="logout-button" id="adminLogout" type="button">Keluar</button></div>
+      </div>
+    </header>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <p class="side-label">Ringkasan</p>
+        <nav class="nav-list" aria-label="Navigasi admin">
+          <button class="nav-button active" data-view="overview" type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg><span>Dashboard eksekutif</span></button>
+          <button class="nav-button" data-view="schedule" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Jadwal & jam layanan</span></button>
+          <button class="nav-button" data-view="applications" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Pengajuan masuk</span><span class="nav-count" id="pendingNavCount">3</span></button>
+        </nav>
+        <hr class="side-divider">
+        <p class="side-label">Pengelolaan</p>
+        <nav class="nav-list" aria-label="Menu pengelolaan">
+          <button class="nav-button" data-view="counselors" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0m3-12a3 3 0 0 1 0 5.8m1.5 2.6a5 5 0 0 1 2.5 3.6"/></svg><span>Bagian konselor</span></button>
+          <button class="nav-button" data-view="reports" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h9l4 4v14H5V3h1Zm8 0v5h5M8 12h8M8 16h8"/></svg><span>Laporan Konseling</span></button>
+        </nav>
+        <div class="sidebar-bottom"><strong id="accessRoleLabel">Akses administrator</strong><span id="accessRoleDescription">Data ditampilkan sesuai role admin akun yang sedang masuk.</span></div>
+      </aside>
+      <main class="main-content">
+        <div class="content-inner">
+          <div class="breadcrumb">Admin <span>/</span> <span id="breadcrumbCurrent">Dashboard eksekutif</span></div>
+
+          <section id="overviewView">
+            <div class="heading-row">
+              <div><h1>Dashboard eksekutif</h1><p class="heading-subtitle">Ringkasan layanan konseling Telkom University.</p></div>
+              <div class="range-controls" role="group" aria-label="Periode laporan">
+                <button class="range-button" data-range="7" type="button">7 hari</button>
+                <button class="range-button active" data-range="30" type="button" aria-pressed="true">30 hari</button>
+                <button class="range-button" data-range="90" type="button">90 hari</button>
+              </div>
+            </div>
+            <div class="summary-grid">
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Jumlah pengajuan</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" data-metric="applications">248</strong><span class="metric-change">↑ 12,4%</span></div><div class="metric-note">dibanding periode sebelumnya</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Jumlah terjadwal</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" data-metric="scheduled">186</strong><span class="metric-change">75,0%</span></div><div class="metric-note">dari seluruh pengajuan</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Jumlah terlaksana</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" data-metric="completed">141</strong><span class="metric-change">↑ 8,2%</span></div><div class="metric-note">sesi telah diselesaikan</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Persentase keterlaksanaan</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 17 9 12l4 3 7-8"/><path d="M14 7h6v6"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" data-metric="rate">75,8%</strong><span class="metric-change">↑ 3,6%</span></div><div class="metric-note">terlaksana dari jadwal terkonfirmasi</div></article>
+            </div>
+            <div class="dashboard-grid">
+              <section class="panel" aria-labelledby="trendHeading">
+                <div class="panel-heading"><div><h2 id="trendHeading">Tren pengajuan konseling</h2><p>Perbandingan jumlah pengajuan dan sesi terlaksana</p></div><span class="period-label" id="chartPeriod">30 hari terakhir</span></div>
+                <div class="chart-area">
+                  <svg viewBox="0 0 620 210" role="img" aria-label="Grafik tren pengajuan dan sesi terlaksana dalam 30 hari terakhir" preserveAspectRatio="none">
+                    <defs><linearGradient id="areaGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#c41230" stop-opacity=".17"/><stop offset="100%" stop-color="#c41230" stop-opacity="0"/></linearGradient></defs>
+                    <line class="chart-gridline" x1="48" y1="25" x2="606" y2="25"/><line class="chart-gridline" x1="48" y1="65" x2="606" y2="65"/><line class="chart-gridline" x1="48" y1="105" x2="606" y2="105"/><line class="chart-gridline" x1="48" y1="145" x2="606" y2="145"/><line class="chart-gridline" x1="48" y1="185" x2="606" y2="185"/>
+                    <text class="chart-axis-label" x="18" y="28">40</text><text class="chart-axis-label" x="18" y="68">30</text><text class="chart-axis-label" x="18" y="108">20</text><text class="chart-axis-label" x="18" y="148">10</text><text class="chart-axis-label" x="27" y="188">0</text>
+                    <path class="chart-area-fill" d="M55 138 L145 113 L235 122 L325 79 L415 93 L505 48 L595 65 L595 185 L55 185 Z"/>
+                    <path class="chart-line" d="M55 138 L145 113 L235 122 L325 79 L415 93 L505 48 L595 65"/>
+                    <path d="M55 157 L145 145 L235 152 L325 121 L415 130 L505 104 L595 111" fill="none" stroke="#65a47c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle class="chart-dot" cx="55" cy="138" r="3.5"/><circle class="chart-dot" cx="145" cy="113" r="3.5"/><circle class="chart-dot" cx="235" cy="122" r="3.5"/><circle class="chart-dot" cx="325" cy="79" r="3.5"/><circle class="chart-dot" cx="415" cy="93" r="3.5"/><circle class="chart-dot" cx="505" cy="48" r="3.5"/><circle class="chart-dot" cx="595" cy="65" r="3.5"/>
+                    <text class="chart-axis-label" text-anchor="middle" x="55" y="204">14 Sep</text><text class="chart-axis-label" text-anchor="middle" x="145" y="204">19 Sep</text><text class="chart-axis-label" text-anchor="middle" x="235" y="204">24 Sep</text><text class="chart-axis-label" text-anchor="middle" x="325" y="204">29 Sep</text><text class="chart-axis-label" text-anchor="middle" x="415" y="204">4 Okt</text><text class="chart-axis-label" text-anchor="middle" x="505" y="204">9 Okt</text><text class="chart-axis-label" text-anchor="middle" x="595" y="204">13 Okt</text>
+                  </svg>
+                </div>
+                <div class="chart-legend"><span class="legend-item"><i class="legend-mark"></i>Pengajuan</span><span class="legend-item"><i class="legend-mark done"></i>Terlaksana</span></div>
+              </section>
+              <section class="panel" aria-labelledby="executionHeading">
+                <div class="panel-heading"><div><h2 id="executionHeading">Keterlaksanaan sesi</h2><p>Sesi terlaksana dibanding jadwal terkonfirmasi</p></div></div>
+                <div class="execution-content">
+                  <div class="donut" role="img" aria-label="75,8 persen jadwal terlaksana"><div class="donut-content"><strong id="executionRate">75,8%</strong><span>terlaksana</span></div></div>
+                  <div class="execution-legend">
+                    <div class="execution-legend-item"><i></i><div><strong id="completedLegend">141 sesi</strong><span>Terlaksana</span></div></div>
+                    <div class="execution-legend-item"><i class="pending"></i><div><strong id="remainingLegend">45 sesi</strong><span>Belum terlaksana</span></div></div>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div class="distribution-grid">
+              <section class="panel distribution-panel" aria-labelledby="categoryHeading">
+                <div class="panel-heading"><div><h2 id="categoryHeading">Distribusi kategori permasalahan</h2><p>Kategori pada pengajuan konseling</p></div><span class="period-label" data-total="applications"></span></div>
+                <div class="bar-list" id="categoryChart"></div>
+              </section>
+              <section class="panel distribution-panel channel-panel" aria-labelledby="channelHeading">
+                <div class="panel-heading"><div><h2 id="channelHeading">Jenis konseling</h2><p>Perbandingan sesi online dan tatap muka</p></div><span class="period-label" data-total="scheduled"></span></div>
+                        <div class="channel-content"><div class="donut channel-donut" role="img" aria-label="64 persen online dan 36 persen tatap muka"><div class="donut-content"><strong>186</strong><span>terjadwal</span></div></div><div class="channel-key"><div class="channel-key-row"><i></i><div><strong>Online</strong><span>119 sesi · 64%</span></div></div><div class="channel-key-row"><i class="offline"></i><div><strong>Tatap muka</strong><span>67 sesi · 36%</span></div></div></div></div>
+              </section>
+              <section class="panel distribution-panel" aria-labelledby="facultyHeading">
+                <div class="panel-heading"><div><h2 id="facultyHeading">Distribusi berdasarkan fakultas</h2><p>Fakultas asal mahasiswa yang mengajukan</p></div><span class="period-label" data-total="applications"></span></div>
+                <div class="faculty-list" id="facultyChart"></div>
+              </section>
+              <section class="panel distribution-panel" aria-labelledby="scheduleStatusHeading">
+                <div class="panel-heading"><div><h2 id="scheduleStatusHeading">Status pengajuan</h2><p>Ringkasan progres layanan konseling</p></div><span class="period-label">30 hari terakhir</span></div>
+                <div class="bar-list" id="statusChart"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="scheduleView" hidden>
+            <div class="heading-row"><div><h1>Jadwal & jam layanan</h1><p class="heading-subtitle">Kelola jadwal konseling dan jam layanan mingguan.</p></div><button class="primary-button" id="showAddSession" type="button">+ Tambah sesi konseling</button></div>
+            <div class="calendar-layout">
+              <section class="panel calendar-panel" aria-labelledby="adminCalendarHeading">
+                <div class="panel-heading"><div><h2 id="adminCalendarHeading">Kalender konseling</h2><p>Lihat pengajuan dan jadwal yang sudah ditetapkan.</p></div><div class="month-controls"><button class="month-button" id="previousMonth" type="button" aria-label="Bulan sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><span class="month-label" id="monthLabel"></span><button class="month-button" id="nextMonth" type="button" aria-label="Bulan berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div>
+                <div class="calendar" id="calendar" role="grid" aria-label="Kalender jadwal konseling"></div>
+                <div class="calendar-legend"><span class="legend-item"><i class="legend-dot"></i>Terkonfirmasi/selesai</span><span class="legend-item"><i class="legend-dot waiting"></i>Menunggu</span><span class="legend-item"><i class="legend-dot closed"></i>Layanan tutup</span></div>
+                <div class="schedule-heading"><strong id="dayAppointmentTitle">Mahasiswa pada tanggal ini</strong><span id="dayAppointmentCount"></span></div>
+                <div class="day-status-summary" id="dayStatusSummary" aria-live="polite"></div>
+                <div class="activity-list" id="dayAppointments"></div>
+              </section>
+              <section class="panel setting-panel" aria-labelledby="settingHeading">
+                <div class="panel-heading"><div><h2 id="settingHeading">Pengaturan jam layanan</h2><p>Atur hari buka dan jam yang tersedia.</p></div></div>
+                <div class="setting-callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>Jam layanan menggunakan slot satu jam. Rentang yang tersedia untuk diatur adalah pukul 08.00 sampai 16.00.</div>
+                <div class="weekday-tabs" id="weekdayTabs" role="tablist" aria-label="Pilih hari layanan"></div>
+                <div class="setting-scope" role="group" aria-label="Cakupan pengaturan">
+                  <label><input type="radio" name="settingScope" value="date" checked><span>Tanggal ini saja</span></label>
+                  <label><input type="radio" name="settingScope" value="weekly"><span>Terapkan setiap minggu</span></label>
+                </div>
+                <p class="setting-scope-note" id="settingScopeNote"></p>
+                <div class="setting-mode-tabs" role="group" aria-label="Jenis konseling">
+                  <button type="button" class="setting-mode active" data-setting-mode="Online" aria-pressed="true">Online</button>
+                  <button type="button" class="setting-mode" data-setting-mode="Tatap muka" aria-pressed="false">Tatap muka</button>
+                </div>
+                <div class="day-setting-head"><h3 id="daySettingTitle"></h3><button class="open-toggle" id="dayOpenToggle" type="button" role="switch" aria-checked="true"><span class="switch" aria-hidden="true"></span><span id="dayOpenLabel">Buka</span></button></div>
+                <div class="hours-head"><span>Pilih jam yang dibuka untuk pendaftaran</span><span>08.00–16.00</span></div>
+                <div class="hours-grid" id="hoursGrid"></div>
+                <div class="setting-footer"><span class="setting-status" id="settingStatus" aria-live="polite"></span><button class="primary-button" id="saveSettings" type="button">Simpan untuk hari ini</button></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="applicationsView" hidden>
+            <div class="heading-row"><div><h1>Review pengajuan</h1><p class="heading-subtitle">Periksa informasi pengajuan sebelum menyetujui jadwal konseling.</p></div></div>
+            <div class="review-layout">
+              <section class="panel">
+                <div class="panel-heading"><div><h2>Daftar pengajuan</h2><p>Pilih pengajuan untuk melihat detailnya.</p></div><span class="period-label" id="queueCount">0 menunggu</span></div>
+                <div class="queue-filters" role="group" aria-label="Filter status pengajuan">
+                  <button class="queue-filter active" data-queue-filter="Menunggu" type="button" aria-pressed="true">Menunggu</button>
+                  <button class="queue-filter" data-queue-filter="Terkonfirmasi" type="button" aria-pressed="false">Terkonfirmasi</button>
+                  <button class="queue-filter" data-queue-filter="Semua" type="button" aria-pressed="false">Semua</button>
+                </div>
+                <div class="review-queue" id="reviewQueue"></div>
+              </section>
+              <section class="panel review-detail" id="reviewDetail" aria-live="polite"></section>
+            </div>
+          </section>
+          <section id="counselorsView" hidden>
+            <div class="heading-row"><div><h1>Bagian konselor</h1><p class="heading-subtitle">Kelola daftar konselor dan status ketersediaan untuk layanan konseling.</p></div><a class="secondary-button" href="counselor.html">Buka pratinjau role konselor</a></div>
+            <section class="panel">
+              <div class="counselor-toolbar"><div><h2>Konselor layanan konseling</h2><p id="counselorCount"></p></div><button class="primary-button" id="showAddCounselor" type="button">Tambah konselor</button></div>
+              <form class="counselor-add-form" id="addCounselorForm" hidden>
+                <div class="counselor-add-field"><label for="newCounselorName">Nama konselor</label><input id="newCounselorName" name="name" autocomplete="name" required></div>
+                <div class="counselor-add-field"><label for="newCounselorEmail">Email akun</label><input id="newCounselorEmail" name="email" type="email" autocomplete="email" required></div>
+                <div class="counselor-add-field"><label for="newCounselorPhone">Nomor WhatsApp</label><input id="newCounselorPhone" name="phone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" pattern="[0-9+() .-]{8,24}" required></div>
+                <p class="counselor-form-message" id="counselorFormMessage" aria-live="polite"></p>
+                <p class="counselor-form-message">Akun dibuat tanpa email undangan. Pengguna akan diminta membuat kata sandi pribadi saat login pertama.</p>
+                <div class="counselor-add-actions"><button class="secondary-button" id="cancelAddCounselor" type="button">Batal</button><button class="primary-button" type="submit">Buat akun & kata sandi awal</button></div>
+              </form>
+              <section class="staff-account-panel" id="superadminAccountPanel" hidden aria-labelledby="staffAccountHeading">
+                <div class="counselor-toolbar"><div><h2 id="staffAccountHeading">Akun administrator dan konselor</h2><p>Buat akun tanpa undangan email. Pengguna wajib mengganti kata sandi saat login pertama.</p></div></div>
+                <form class="counselor-add-form" id="staffAccountForm">
+                  <div class="counselor-add-field"><label for="staffAccountName">Nama lengkap</label><input id="staffAccountName" name="full_name" autocomplete="name" maxlength="120" required></div>
+                  <div class="counselor-add-field"><label for="staffAccountEmail">Email akun</label><input id="staffAccountEmail" name="email" type="email" autocomplete="email" required></div>
+                  <div class="counselor-add-field"><label for="staffAccountRole">Role akun</label><select id="staffAccountRole" name="role" required><option value="counselor">Konselor</option><option value="admin">Admin</option></select></div>
+                  <div class="counselor-add-field" id="staffAccountPhoneField"><label for="staffAccountPhone">Nomor WhatsApp konselor</label><input id="staffAccountPhone" name="phone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" pattern="[0-9+() .-]{8,24}"></div>
+                  <p class="counselor-form-message" id="staffAccountMessage" aria-live="polite"></p>
+                  <div class="counselor-add-actions"><button class="primary-button" type="submit">Buat akun & kata sandi awal</button></div>
+                </form>
+                <div class="staff-accounts" id="staffAccounts" aria-live="polite"></div>
+              </section>
+              <div class="temporary-password" id="temporaryPasswordPanel" hidden role="status">
+                <div><strong>Kata sandi sementara · tampil sekali</strong><p id="temporaryPasswordNote"></p><code id="temporaryPasswordValue"></code></div>
+                <button class="secondary-button" id="copyTemporaryPassword" type="button">Salin kata sandi</button>
+                <button class="secondary-button" id="dismissTemporaryPassword" type="button">Tutup</button>
+                <p class="temporary-password-warning">Sampaikan melalui jalur yang aman. Pengguna wajib menggantinya saat login pertama. Kata sandi ini tidak disimpan dan tidak dapat dilihat lagi.</p>
+              </div>
+              <div class="counselor-roster" id="counselorsList"></div>
+            </section>
+          </section>
+          <section id="reportsView" hidden>
+            <div class="heading-row"><div><h1>Laporan Konseling</h1><p class="heading-subtitle">Riwayat sesi dan laporan yang diisi konselor. Admin dapat melihat, mengunduh, atau mencetak laporan.</p></div></div>
+            <div class="report-layout">
+              <section class="panel" aria-labelledby="reportStudentsHeading">
+                <div class="panel-heading"><div><h2 id="reportStudentsHeading">Mahasiswa pernah konseling</h2><p>Pilih mahasiswa untuk melihat riwayat sesi.</p></div></div>
+                <input class="report-search" id="reportSearch" type="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa berdasarkan nama atau NIM">
+                <div class="report-student-list" id="reportStudentList"></div>
+              </section>
+              <section class="panel report-detail" id="reportDetail" aria-live="polite"><div class="review-empty">Pilih mahasiswa untuk melihat riwayat konseling.</div></section>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <div class="reschedule-backdrop" id="rescheduleBackdrop" hidden>
+      <section class="reschedule-modal" role="dialog" aria-modal="true" aria-labelledby="rescheduleTitle">
+        <h2 id="rescheduleTitle">Ubah jadwal konseling</h2>
+        <p class="reschedule-intro">Sesuaikan tanggal, jam, atau konselor jika jadwal bentrok atau konselor berhalangan. Setelah disimpan, kirim perubahan melalui reminder WhatsApp.</p>
+        <div class="reschedule-summary" id="rescheduleSummary"></div>
+        <form id="rescheduleForm">
+          <div class="reschedule-fields">
+            <div class="reschedule-field"><label for="rescheduleDate">Tanggal baru</label><input id="rescheduleDate" name="date" type="date" required></div>
+            <div class="reschedule-field"><label for="rescheduleTime">Jam tersedia</label><select id="rescheduleTime" name="time" required></select></div>
+            <div class="reschedule-field wide"><label for="rescheduleCounselor">Konselor</label><select id="rescheduleCounselor" name="counselor" required><option value="" disabled>Pilih konselor</option><option>Dr. Rani Putri</option><option>Mira Anggraini, M.Psi.</option><option>Budi Santoso, M.Psi.</option></select></div>
+            <div class="reschedule-field wide" id="rescheduleLocationField"><label for="rescheduleLocation">Lokasi sesi</label><input id="rescheduleLocation" name="location" required></div>
+            <p class="reschedule-note">Hanya jam layanan yang dibuka pada pengaturan hari tersebut yang dapat dipilih. Sistem juga mencegah bentrok jadwal konselor yang sama.</p>
+            <p class="reschedule-message" id="rescheduleMessage" aria-live="polite"></p>
+          </div>
+          <div class="reschedule-actions"><button class="secondary-button" id="cancelReschedule" type="button">Batal</button><button class="primary-button" type="submit">Simpan perubahan</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="approval-backdrop" id="approvalBackdrop" hidden>
+      <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="approvalTitle">
+        <h2 id="approvalTitle">Konfirmasi jadwal konseling</h2>
+        <p class="approval-intro">Sesuaikan tanggal dan jam pilihan mahasiswa bila diperlukan, lalu pilih konselor dan lengkapi detail layanan.</p>
+        <div class="approval-summary" id="approvalSummary"></div>
+        <form id="approvalForm">
+          <div class="approval-fields">
+            <div class="approval-field"><label for="approvalDate">Tanggal konseling</label><input id="approvalDate" name="date" type="date" required></div>
+            <div class="approval-field"><label for="approvalTime">Jam tersedia</label><select id="approvalTime" name="time" required></select></div>
+            <div class="approval-field"><label for="assignedCounselor">Konselor</label><select id="assignedCounselor" name="counselor" required><option value="" selected disabled>Pilih konselor</option><option>Dr. Rani Putri</option><option>Mira Anggraini, M.Psi.</option><option>Budi Santoso, M.Psi.</option></select></div>
+            <div class="approval-field" id="locationField"><label for="sessionLocation">Lokasi sesi</label><input id="sessionLocation" name="location" required></div>
+          </div>
+          <p class="approval-message" id="approvalMessage" aria-live="polite"></p>
+          <div class="approval-actions"><button class="secondary-button" id="cancelApproval" type="button">Batal</button><button class="primary-button" type="submit">Konfirmasi pengajuan</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="approval-backdrop" id="addSessionBackdrop" hidden>
+      <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="addSessionTitle">
+        <h2 id="addSessionTitle">Tambah sesi konseling</h2>
+        <p class="approval-intro">Buat jadwal terkonfirmasi untuk mahasiswa dan konselor. Sesi akan langsung muncul pada kalender kedua role.</p>
+        <form id="manualSessionForm">
+          <div class="approval-fields">
+            <div class="approval-field"><label for="manualStudent">Mahasiswa</label><select id="manualStudent" required><option value="">Pilih mahasiswa</option></select></div>
+            <div class="approval-field"><label for="manualCounselor">Konselor</label><select id="manualCounselor" required><option value="">Pilih konselor aktif</option></select></div>
+            <div class="approval-field"><label for="manualMode">Jenis konseling</label><select id="manualMode" required><option>Online</option><option>Tatap muka</option></select></div>
+            <div class="approval-field"><label for="manualDate">Tanggal</label><input id="manualDate" type="date" required></div>
+            <div class="approval-field"><label for="manualTime">Jam layanan</label><select id="manualTime" required></select></div>
+            <div class="approval-field"><label for="manualCategory">Kategori</label><select id="manualCategory" required><option>Akademik</option><option>Pribadi</option><option>Sosial</option><option>Keluarga</option><option>Karier</option><option>Lainnya</option></select></div>
+            <div class="approval-field" id="manualLocationField"><label for="manualLocation">Link Zoom</label><input id="manualLocation" type="url" placeholder="https://..." required></div>
+            <div class="approval-field"><label for="manualIssue">Masalah</label><input id="manualIssue" required></div>
+            <div class="approval-field"><label for="manualReason">Alasan konseling</label><input id="manualReason" required></div>
+            <div class="approval-field wide"><label for="manualDetails">Detail masalah</label><textarea id="manualDetails" required></textarea></div>
+          </div>
+          <p class="approval-message" id="manualSessionMessage" aria-live="polite"></p>
+          <div class="approval-actions"><button class="secondary-button" id="cancelAddSession" type="button">Batal</button><button class="primary-button" type="submit">Buat sesi</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg><span id="toastMessage"></span></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/supabase-config.js"></script>
+    <script src="assets/supabase.js"></script>
+    <script src="assets/js/admin.js"></script>
+  </body>
+</html>

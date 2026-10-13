@@ -1,0 +1,143 @@
+      :root {
+        color-scheme: light;
+        --red: #c41230;
+        --red-dark: #a70f28;
+        --red-soft: #fff0f2;
+        --ink: #29282a;
+        --muted: #777579;
+        --line: #eceaeb;
+        --canvas: #f8f7f7;
+        --green: #2f8056;
+        --green-soft: #eaf5ee;
+        --blue-soft: #edf2fb;
+        --gold-soft: #fbf4e4;
+        --shadow: 0 22px 60px rgb(42 27 30 / 12%);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body:not(.authenticated) { visibility: hidden; }
+      body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--canvas); color: var(--ink); }
+      button, input, select, textarea { font: inherit; }
+      button { cursor: pointer; }
+      [hidden] { display: none !important; }
+      .app-header { position: sticky; z-index: 5; top: 0; display: flex; height: 66px; align-items: center; justify-content: space-between; padding: 0 clamp(16px, 4vw, 48px); border-bottom: 1px solid var(--line); background: rgb(255 255 255 / 96%); backdrop-filter: blur(12px); }
+      .header-brand { display: flex; align-items: center; gap: 13px; }
+      .header-brand img { display: block; width: 137px; height: auto; }
+      .brand-divider { width: 1px; height: 25px; background: var(--line); }
+      .product-name { color: #625e61; font-size: 10px; font-weight: 580; }
+      .user-menu { display: flex; align-items: center; gap: 9px; }
+      .avatar { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #fae4e7; color: var(--red); font-size: 10px; font-weight: 700; }
+      .user-copy { display: grid; gap: 3px; }
+      .user-name { font-size: 10px; font-weight: 650; }
+      .user-role { color: var(--muted); font-size: 8px; }
+      .preview-chip { padding: 6px 9px; border: 1px solid #f0dadd; border-radius: 20px; background: #fff8f8; color: var(--red); font-size: 8px; font-weight: 650; }
+      .page { width: min(1120px, calc(100% - 36px)); margin: 28px auto 48px; }
+      .breadcrumb { margin-bottom: 14px; color: #999598; font-size: 9px; }
+      .heading-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 19px; }
+      h1 { margin: 0; font-size: clamp(23px, 3vw, 29px); font-weight: 680; letter-spacing: -.8px; }
+      .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 10px; }
+      .panel { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+      .workspace-nav { display: flex; gap: 6px; margin-bottom: 14px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+      .nav-tab { min-height: 33px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: #706b70; font-size: 9px; font-weight: 600; }
+      .nav-tab.active { background: var(--red-soft); color: var(--red); }
+      .calendar-panel { margin-bottom: 14px; }
+      .calendar-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+      .calendar-heading h2 { margin: 0; font-size: 12px; font-weight: 680; }
+      .calendar-heading p { margin: 5px 0 0; color: var(--muted); font-size: 8px; }
+      .calendar-controls { display: flex; align-items: center; gap: 7px; }
+      .calendar-month { min-width: 125px; color: #514d50; font-size: 9px; font-weight: 650; text-align: center; }
+      .calendar-nav { display: grid; width: 29px; height: 29px; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: white; color: #625d61; font-size: 13px; }
+      .calendar-nav:hover { border-color: #e7c1c7; color: var(--red); }
+      .calendar-today { min-height: 29px; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; background: white; color: #625d61; font-size: 8px; font-weight: 620; }
+      .calendar-today:hover { border-color: #e7c1c7; color: var(--red); }
+      .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+      .calendar-weekday { padding: 5px 2px; color: #898488; font-size: 8px; font-weight: 650; text-align: center; }
+      .calendar-day { display: flex; min-width: 0; min-height: 77px; flex-direction: column; align-items: flex-start; gap: 5px; padding: 7px; border: 1px solid #f0edef; border-radius: 6px; background: white; color: var(--ink); text-align: left; }
+      .calendar-day:hover { border-color: #e7c1c7; background: #fffafb; }
+      .calendar-day.selected { border-color: var(--red); background: var(--red-soft); }
+      .calendar-day.outside-month { background: #faf9f9; color: #aaa5a8; }
+      .calendar-day.today .calendar-date { color: var(--red); font-weight: 750; }
+      .calendar-date { font-size: 9px; font-weight: 600; }
+      .calendar-event { width: 100%; overflow: hidden; color: #716b70; font-size: 7px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+      .calendar-event.has-session { color: var(--red); font-weight: 650; }
+      .layout { display: grid; grid-template-columns: minmax(245px, .72fr) minmax(0, 1.5fr); gap: 14px; align-items: start; }
+      .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; margin-bottom: 14px; }
+      .panel-heading h2 { margin: 0; font-size: 12px; font-weight: 680; }
+      .panel-heading p { margin: 5px 0 0; color: var(--muted); font-size: 8px; }
+      .count-label { padding: 5px 7px; border-radius: 5px; background: #f7f5f5; color: #757074; font-size: 8px; white-space: nowrap; }
+      .session-list { display: grid; gap: 7px; }
+      .session-item { display: grid; width: 100%; gap: 5px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); text-align: left; }
+      .session-item:hover { border-color: #e7c1c7; background: #fffafb; }
+      .session-item.active { border-color: var(--red); background: var(--red-soft); }
+      .session-item strong { font-size: 9px; font-weight: 650; }
+      .session-item span { color: var(--muted); font-size: 8px; }
+      .session-item small { justify-self: start; padding: 4px 7px; border-radius: 12px; background: var(--blue-soft); color: #526c9b; font-size: 7px; font-weight: 650; }
+      .session-item small.done { background: var(--green-soft); color: var(--green); }
+      .detail-panel { min-height: 300px; }
+      .detail-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+      .detail-heading h2 { margin: 0; font-size: 14px; }
+      .detail-heading p { margin: 5px 0 0; color: var(--muted); font-size: 8px; }
+      .status { padding: 5px 8px; border-radius: 15px; background: var(--blue-soft); color: #526c9b; font-size: 8px; font-weight: 650; }
+      .status.done { background: var(--green-soft); color: var(--green); }
+      .section-title { margin: 14px 0 8px; color: #514d50; font-size: 9px; font-weight: 700; }
+      .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .field { min-width: 0; padding: 8px; border: 1px solid #f0edef; border-radius: 6px; background: #fff; }
+      .field.wide { grid-column: 1 / -1; }
+      .field span { display: block; margin-bottom: 4px; color: #989397; font-size: 7px; }
+      .field strong { display: block; overflow-wrap: anywhere; color: #4f4a4e; font-size: 8px; font-weight: 600; line-height: 1.5; }
+      .field a { color: #526c9b; font-size: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+      .private-note, .preview-note { margin: 11px 0 0; padding: 9px; border-radius: 6px; background: #fbf6f6; color: #766d71; font-size: 8px; line-height: 1.55; }
+      .primary-button { display: inline-flex; min-height: 35px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--red); color: white; font-size: 9px; font-weight: 650; }
+      .primary-button:hover { background: var(--red-dark); }
+      .secondary-button, .report-action { min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: white; color: #625d61; font-size: 8px; font-weight: 620; }
+      .secondary-button:hover, .report-action:hover { border-color: #e7c1c7; color: var(--red); }
+      .detail-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; padding-top: 11px; border-top: 1px solid var(--line); }
+      .empty-state { display: grid; min-height: 230px; place-content: center; color: var(--muted); font-size: 9px; text-align: center; }
+      .report-card { margin-top: 11px; padding: 12px; border: 1px solid #f0edef; border-radius: 7px; background: white; }
+      .report-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+      .report-card-head strong { font-size: 9px; }
+      .report-card-head span { color: var(--muted); font-size: 8px; }
+      .report-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+      .report-meta span { padding: 4px 7px; border-radius: 12px; background: #f7f5f5; color: #777276; font-size: 7px; }
+      .report-card h3 { margin: 10px 0 4px; color: #777276; font-size: 8px; }
+      .report-card p { margin: 0; color: #514d50; font-size: 8px; line-height: 1.6; }
+      .report-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; padding-top: 9px; border-top: 1px solid #f1eff0; }
+      .report-form-panel { width: min(100%, 660px); max-height: calc(100vh - 32px); overflow-y: auto; padding: 20px; border-radius: 11px; background: white; box-shadow: var(--shadow); }
+      .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; align-items: center; justify-items: center; overflow: auto; padding: 16px; background: rgb(32 26 28 / 46%); }
+      .modal-backdrop h2 { margin: 0; font-size: 16px; }
+      .modal-intro { margin: 6px 0 14px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+      .report-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .form-field { display: grid; min-width: 0; gap: 5px; }
+      .form-field.wide { grid-column: 1 / -1; }
+      .form-field label { font-size: 9px; font-weight: 650; }
+      .form-field input, .form-field textarea { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid #e5e1e3; border-radius: 6px; outline: 0; background: white; color: var(--ink); font: inherit; font-size: 9px; }
+      .form-field input[readonly] { background: #f8f7f7; color: #706b70; }
+      .form-field textarea { min-height: 70px; resize: vertical; line-height: 1.5; }
+      .form-field input:focus, .form-field textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgb(196 18 48 / 9%); }
+      .form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; grid-column: 1 / -1; margin-top: 5px; padding-top: 11px; border-top: 1px solid var(--line); }
+      .toast { position: fixed; z-index: 20; right: 18px; bottom: 18px; max-width: min(370px, calc(100vw - 36px)); padding: 11px 14px; transform: translateY(10px); border: 1px solid #dceee2; border-radius: 8px; background: white; box-shadow: 0 10px 27px rgb(40 30 32 / 12%); color: #436c50; font-size: 9px; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
+      .toast.show { transform: translateY(0); opacity: 1; }
+      @media (max-width: 720px) {
+        .app-header { height: 59px; padding: 0 13px; }
+        .header-brand { gap: 8px; }
+        .header-brand img { width: 110px; }
+        .product-name { max-width: 72px; font-size: 8px; line-height: 1.2; }
+        .preview-chip { display: none; }
+        .user-copy { display: none; }
+        .page { width: calc(100% - 26px); margin-top: 20px; }
+        .layout { grid-template-columns: 1fr; }
+        .fields { grid-template-columns: 1fr; }
+        .field.wide { grid-column: auto; }
+        .calendar-grid { gap: 3px; }
+        .calendar-day { min-height: 58px; gap: 4px; padding: 5px 4px; }
+        .calendar-weekday { font-size: 7px; }
+        .calendar-event { font-size: 6px; }
+      }
+      @media (max-width: 460px) {
+        .report-form { grid-template-columns: 1fr; }
+        .form-field.wide, .form-actions { grid-column: auto; }
+        .calendar-heading { align-items: flex-start; }
+        .calendar-controls { width: 100%; justify-content: space-between; }
+        .calendar-month { flex: 1; }
+      }
+      @media print { .app-header, .page { display: none !important; } }

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#c41230">
+    <meta name="description" content="Pratinjau ruang kerja konselor Telkom University.">
+    <title>Ruang Konselor — Layanan Konseling Telkom University</title>
+    <link rel="stylesheet" href="assets/css/counselor.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <img src="assets/telkom-university-logo.png" alt="Telkom University">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="product-name">Layanan Konseling</span>
+      </div>
+      <div class="user-menu">
+        <span class="preview-chip">Pratinjau role konselor</span>
+        <div class="avatar" aria-hidden="true">RP</div>
+        <div class="user-copy"><span class="user-name" id="signedInCounselor">Dr. Rani Putri</span><span class="user-role">Konselor</span></div>
+        <button class="secondary-button" id="counselorLogout" type="button">Keluar</button>
+      </div>
+    </header>
+    <main class="page">
+      <div class="breadcrumb">Layanan Konseling <span aria-hidden="true">/</span> Ruang konselor</div>
+      <div class="heading-row"><div><h1>Ruang konselor</h1><p class="subtitle">Jadwal dan riwayat sesi yang ditugaskan kepada Anda.</p></div></div>
+      <nav class="workspace-nav" aria-label="Menu konselor">
+        <button class="nav-tab active" data-tab="schedule" type="button" aria-pressed="true">Jadwal saya</button>
+        <button class="nav-tab" data-tab="history" type="button" aria-pressed="false">Riwayat konseling</button>
+      </nav>
+      <section class="panel calendar-panel" id="scheduleCalendar" aria-label="Kalender jadwal konseling">
+        <div class="calendar-heading">
+          <div><h2>Kalender jadwal</h2><p>Pilih tanggal untuk melihat sesi konseling pada hari tersebut.</p></div>
+          <div class="calendar-controls">
+            <button class="calendar-nav" id="previousMonth" type="button" aria-label="Bulan sebelumnya">‹</button>
+            <span class="calendar-month" id="calendarMonth" aria-live="polite"></span>
+            <button class="calendar-nav" id="nextMonth" type="button" aria-label="Bulan berikutnya">›</button>
+            <button class="calendar-today" id="calendarToday" type="button">Hari ini</button>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Kalender bulanan"></div>
+      </section>
+      <section class="layout" id="scheduleView">
+        <section class="panel">
+          <div class="panel-heading"><div><h2 id="dayScheduleTitle">Jadwal konseling</h2><p id="dayScheduleSubtitle">Hanya sesi yang ditugaskan kepada Anda.</p></div><span class="count-label" id="scheduleCount"></span></div>
+          <div class="session-list" id="scheduleList"></div>
+        </section>
+        <section class="panel detail-panel" id="scheduleDetail" aria-live="polite"></section>
+      </section>
+      <section class="layout" id="historyView" hidden>
+        <section class="panel">
+          <div class="panel-heading"><div><h2>Riwayat sesi</h2><p>Laporan konseling yang telah disimpan.</p></div><span class="count-label" id="historyCount"></span></div>
+          <div class="session-list" id="historyList"></div>
+        </section>
+        <section class="panel detail-panel" id="historyDetail" aria-live="polite"></section>
+      </section>
+      <p class="preview-note">Daftar ini hanya memuat sesi yang ditugaskan kepada akun konselor yang sedang masuk. Perubahan laporan tersimpan di database.</p>
+    </main>
+    <div class="modal-backdrop" id="reportModal" hidden>
+      <section class="report-form-panel" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+        <h2 id="reportTitle">Laporan pelaksanaan konseling</h2>
+        <p class="modal-intro">Lengkapi laporan sesi yang baru saja dilaksanakan. Setelah disimpan, sesi akan masuk ke riwayat konseling.</p>
+        <form id="reportForm">
+          <div class="report-form">
+            <div class="form-field"><label for="reportStudent">Nama Mahasiswa</label><input id="reportStudent" readonly></div>
+            <div class="form-field"><label for="reportNim">NIM Mahasiswa</label><input id="reportNim" readonly></div>
+            <div class="form-field"><label for="reportCounselor">Nama Konselor</label><input id="reportCounselor" readonly></div>
+            <div class="form-field"><label for="reportTime">Waktu Pelaksanaan Konseling</label><input id="reportTime" readonly></div>
+            <div class="form-field"><label for="reportMeeting">Pertemuan ke</label><input id="reportMeeting" readonly></div>
+            <div class="form-field wide"><label for="reportDiagnosis">Diagnosis Kasus</label><textarea id="reportDiagnosis" required></textarea></div>
+            <div class="form-field wide"><label for="reportDescription">Deskripsi Kasus</label><textarea id="reportDescription" required></textarea></div>
+            <div class="form-field wide"><label for="reportIntervention">Hasil Intervensi</label><textarea id="reportIntervention" required></textarea></div>
+            <div class="form-field wide"><label for="reportConclusion">Kesimpulan Hasil</label><textarea id="reportConclusion" required></textarea></div>
+            <div class="form-field wide"><label for="reportRecommendation">Rekomendasi</label><textarea id="reportRecommendation" required></textarea></div>
+            <div class="form-actions"><button class="secondary-button" id="cancelReport" type="button">Batal</button><button class="primary-button" type="submit">Simpan laporan & selesaikan sesi</button></div>
+          </div>
+        </form>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/supabase-config.js"></script>
+    <script src="assets/supabase.js"></script>
+    <script src="assets/js/counselor.js"></script>
+  </body>
+</html>

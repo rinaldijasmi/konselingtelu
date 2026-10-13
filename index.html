@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#c41230">
+    <meta name="description" content="Preview portal layanan konseling mahasiswa Telkom University.">
+    <title>Konseling Mahasiswa — Telkom University</title>
+    <link rel="stylesheet" href="assets/css/index.css">
+  </head>
+  <body>
+    <main id="loginScreen" class="login-screen">
+      <section class="login-main" aria-labelledby="loginTitle">
+        <a class="login-brand" href="#" aria-label="Telkom University">
+          <img src="assets/telkom-university-logo.png" alt="Telkom University">
+        </a>
+        <div class="login-content">
+          <p class="eyebrow">Portal layanan mahasiswa</p>
+          <h1 id="loginTitle">Masuk ke akun Anda</h1>
+          <p class="login-intro">Akses layanan konseling dengan mudah dan nyaman. Masukkan akun Telkom University Anda untuk melanjutkan.</p>
+          <form id="loginForm">
+            <div class="field-group">
+              <label class="field-label" for="loginEmail">Email</label>
+              <input class="field" id="loginEmail" name="email" type="email" placeholder="nama@student.telkomuniversity.ac.id" autocomplete="username" required>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="loginPassword">Kata sandi</label>
+              <div class="field-wrap">
+                <input class="field password-field" id="loginPassword" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required>
+                <button class="password-toggle" id="togglePassword" type="button" aria-label="Tampilkan kata sandi" title="Tampilkan kata sandi">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2.5 12s3.2-6 9.5-6 9.5 6 9.5 6-3.2 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="login-meta"><button class="text-button" id="forgotPassword" type="button">Lupa kata sandi?</button></div>
+            <button class="primary-button login-submit" type="submit">Masuk <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+            <p class="login-notice" id="loginNotice" aria-live="polite"></p>
+          </form>
+          <form id="signupForm" hidden>
+            <div class="field-group">
+              <label class="field-label" for="signupName">Nama lengkap</label>
+              <input class="field" id="signupName" name="name" type="text" autocomplete="name" maxlength="120" required>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="signupEmail">Email</label>
+              <input class="field" id="signupEmail" name="email" type="email" placeholder="nama@student.telkomuniversity.ac.id" autocomplete="email" required>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="signupPassword">Kata sandi</label>
+              <input class="field" id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="12" required aria-describedby="signupPasswordHint">
+              <small class="signup-note" id="signupPasswordHint">Gunakan minimal 12 karakter.</small>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="signupPasswordConfirm">Ulangi kata sandi</label>
+              <input class="field" id="signupPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" required>
+            </div>
+            <button class="primary-button login-submit" type="submit">Buat akun</button>
+            <p class="login-notice" id="signupNotice" aria-live="polite"></p>
+          </form>
+          <p class="auth-switch"><span id="authSwitchPrompt">Belum memiliki akun?</span> <button id="authSwitchButton" type="button">Daftar sebagai mahasiswa</button></p>
+          <div class="role-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.8 19.8 0 0 1 11.19 18a19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.08 3.18 2 2 0 0 1 4.07 1h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.11L8.05 8.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.84.58 2.8.7A2 2 0 0 1 22 16.92Z"/></svg>
+            <span>Hotline Konseling: <a href="tel:082130155601">0821-3015-5601</a></span>
+          </div>
+        </div>
+        <footer class="login-footer">© 2026 Telkom University · Layanan Konseling Mahasiswa</footer>
+      </section>
+      <aside class="login-aside" aria-label="Tentang layanan konseling">
+        <div class="aside-content">
+          <div class="aside-symbol">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-3 2v-6.3A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 11.5h8m-8-3h5m-5 6h6"/></svg>
+          </div>
+          <h2>Ruang aman untuk <span>bertumbuh.</span></h2>
+          <p class="aside-copy">Temukan waktu yang tepat untuk berbicara dengan konselor kampus. Kami siap menemani perjalanan Anda.</p>
+          <ul class="aside-points">
+            <li><span class="point-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18m-13 5 2 2 4-4"/></svg></span>Jadwal konseling yang mudah dipilih</li>
+            <li><span class="point-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span>Privasi dan kenyamanan Anda diutamakan</li>
+            <li><span class="point-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 10v4m5-7v10m5-7v4"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg></span>Pilih sesi online atau tatap muka</li>
+          </ul>
+          <div class="aside-tag">Peduli, dengarkan, bertumbuh</div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="dashboard" id="dashboard" hidden>
+      <header class="app-header">
+        <div class="header-brand">
+          <img src="assets/telkom-university-logo.png" alt="Telkom University">
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="product-name">Layanan Konseling</span>
+        </div>
+        <div class="header-actions">
+          <button class="icon-button" id="notificationButton" type="button" aria-label="Notifikasi" title="Notifikasi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12h4"/></svg><span class="notification-dot"></span>
+          </button>
+          <div class="user-menu">
+            <div class="avatar" aria-hidden="true">AR</div>
+            <div class="user-copy"><span class="user-name" id="userName">Alya Rahma</span><span class="user-role">Mahasiswa</span></div>
+            <button class="logout-button" id="logoutButton" type="button">Keluar</button>
+          </div>
+        </div>
+      </header>
+      <div class="app-layout">
+        <aside class="sidebar">
+          <p class="side-label">Menu utama</p>
+          <nav class="nav-list" aria-label="Navigasi utama">
+            <button class="nav-button active" data-view="schedule" type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18m4 5h.01"/></svg><span>Jadwal konseling</span></button>
+            <button class="nav-button" data-view="history" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/></svg><span>Riwayat pengajuan</span><span class="nav-count" id="historyCount">0</span></button>
+          </nav>
+          <div class="sidebar-bottom"><strong>Butuh bantuan?</strong>Hubungi admin layanan konseling melalui WhatsApp.</div>
+        </aside>
+        <main class="main-content">
+          <div class="content-inner">
+            <div class="breadcrumb">Beranda <span>/</span> <span id="breadcrumbCurrent">Jadwal konseling</span></div>
+            <section id="scheduleView">
+              <div class="heading-row">
+                <div><h1>Jadwal konseling</h1><p class="heading-subtitle">Pilih waktu yang nyaman untuk Anda.</p></div>
+                <div class="today-label" id="todayLabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span></span></div>
+              </div>
+              <div class="welcome-card">
+                <div class="welcome-copy"><p>Halo, <span id="welcomeName">Alya</span> 👋</p><h2>Mulai dari satu percakapan.</h2><p class="welcome-note">Pilih jadwal yang sesuai. Semua sesi bersifat privat dan suportif.</p></div>
+                <div class="welcome-illustration" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-3 2v-6.3A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 11.5h8m-8-3h5m-5 6h6"/></svg></div>
+              </div>
+              <div class="summary-grid">
+                <div class="summary-card"><div class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div><div><div class="summary-label">Jadwal tersedia</div><div class="summary-value" id="availableCount">0 slot</div></div></div>
+                <div class="summary-card"><div class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><div class="summary-label">Pengajuan menunggu</div><div class="summary-value" id="pendingCount">0</div></div></div>
+                <div class="summary-card"><div class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></div><div><div class="summary-label">Jadwal terkonfirmasi</div><div class="summary-value" id="confirmedCount">0</div></div></div>
+              </div>
+              <div class="schedule-layout">
+                <section class="panel" aria-labelledby="calendarHeading">
+                  <div class="panel-heading">
+                    <div><h2 id="calendarHeading">Kalender jadwal</h2><p>Titik hijau menandakan jadwal tersedia</p></div>
+                    <div class="month-controls"><button class="month-button" id="previousMonth" type="button" aria-label="Bulan sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><span class="month-label" id="monthLabel"></span><button class="month-button" id="nextMonth" type="button" aria-label="Bulan berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div>
+                  </div>
+                  <div class="calendar-filters" role="group" aria-label="Filter jenis sesi">
+                    <button class="filter-button active" data-filter="semua" type="button" aria-pressed="true">Semua sesi</button>
+                    <button class="filter-button" data-filter="online" type="button" aria-pressed="false">Online</button>
+                    <button class="filter-button" data-filter="offline" type="button" aria-pressed="false">Tatap muka</button>
+                  </div>
+                  <div class="calendar" id="calendar" role="grid" aria-label="Kalender jadwal konseling"></div>
+                  <div class="calendar-legend"><span class="legend-item"><span class="legend-dot"></span>Jadwal tersedia</span><span class="legend-item"><span class="legend-dot current"></span>Tanggal dipilih</span></div>
+                </section>
+                <section class="panel slots-panel" aria-labelledby="slotHeading">
+                  <div class="panel-heading"><div><h2 id="slotHeading">Pilih waktu</h2><p>Pilih satu slot untuk mengajukan sesi</p></div></div>
+                  <div class="selected-date"><div class="date-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div><div><strong id="selectedDateLabel"></strong><span>Durasi sesi 60 menit</span></div></div>
+                  <div class="slot-list" id="slotList"></div>
+                </section>
+              </div>
+              <section class="panel appointment-panel" aria-labelledby="appointmentHeading">
+                <div class="panel-heading"><div><h2 id="appointmentHeading">Pengajuan saya</h2><p>Lihat status pendaftaran konseling Anda</p></div><button class="appointment-link" data-open-history type="button">Lihat semua</button></div>
+                <div class="appointment-list" id="appointmentList"></div>
+              </section>
+            </section>
+            <section id="historyView" hidden>
+              <div class="heading-row"><div><h1>Riwayat pengajuan</h1><p class="heading-subtitle">Pantau status semua pengajuan konseling Anda.</p></div></div>
+              <div class="history-view" id="historyList"></div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="bookingBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+        <div class="modal-top"><div><h2 id="bookingTitle">Ajukan sesi konseling</h2><p id="bookingIntro">Lengkapi data diri dan kebutuhan konseling Anda.</p></div><button class="close-button" data-close-modal type="button" aria-label="Tutup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>
+        <div class="booking-summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><div><strong id="bookingDate"></strong><span id="bookingSession"></span></div></div>
+        <form id="bookingForm">
+          <div class="modal-fields">
+            <div class="saved-profile" id="savedProfileSummary" hidden></div>
+            <div id="personalFields" class="form-fields-group">
+            <h3 class="form-section-title">Identitas mahasiswa</h3>
+            <div class="field-group wide"><label class="field-label" for="studentName">Nama</label><input class="field" id="studentName" name="nama" autocomplete="name" required></div>
+            <div class="field-group"><label class="field-label" for="studentNim">NIM</label><input class="field" id="studentNim" name="nim" inputmode="numeric" required></div>
+            <div class="field-group"><label class="field-label" for="studentProgram">Program Studi</label><input class="field" id="studentProgram" name="program" required></div>
+            <div class="field-group"><label class="field-label" for="studentFaculty">Fakultas</label><input class="field" id="studentFaculty" name="fakultas" required></div>
+            <div class="field-group"><label class="field-label" for="studentPhone">Kontak (No. WhatsApp yang aktif)</label><input class="field" id="studentPhone" name="phone" type="tel" autocomplete="tel" required></div>
+
+            <h3 class="form-section-title">Data diri</h3>
+            <div class="field-group"><label class="field-label" for="studentBirthDate">Tanggal Lahir</label><input class="field" id="studentBirthDate" name="tanggal_lahir" type="date" required></div>
+            <div class="field-group"><label class="field-label" for="studentEthnicity">Suku Bangsa</label><input class="field" id="studentEthnicity" name="suku_bangsa" required></div>
+            <div class="field-group"><label class="field-label" for="studentReligion">Agama</label><select class="field" id="studentReligion" name="agama" required><option value="" selected disabled>Pilih agama</option><option>Islam</option><option>Kristen Protestan</option><option>Katolik</option><option>Hindu</option><option>Buddha</option><option>Konghucu</option><option>Lainnya</option></select></div>
+            <div class="field-group"><label class="field-label" for="studentCity">Asal Kota</label><input class="field" id="studentCity" name="asal_kota" required></div>
+            <div class="field-group wide"><label class="field-label" for="studentAddress">Alamat Tinggal</label><textarea class="field" id="studentAddress" name="alamat" autocomplete="street-address" required></textarea></div>
+            <div class="field-group"><label class="field-label" for="studentBirthOrder">Anak Ke-</label><input class="field" id="studentBirthOrder" name="anak_ke" type="number" min="1" step="1" inputmode="numeric" required></div>
+            <div class="field-group"><label class="field-label" for="studentSiblingCount">Jumlah Saudara Kandung</label><input class="field" id="studentSiblingCount" name="jumlah_saudara" type="number" min="0" step="1" inputmode="numeric" required></div>
+            </div>
+            <div id="sessionFields" class="form-fields-group">
+              <h3 class="form-section-title">Kebutuhan konseling</h3>
+              <div class="field-group"><label class="field-label" for="studentIssue">Masalah</label><input class="field" id="studentIssue" name="masalah" placeholder="Ringkasan singkat" required></div>
+              <div class="field-group"><label class="field-label" for="studentCategory">Kategori</label><select class="field" id="studentCategory" name="kategori" required><option value="" selected disabled>Pilih kategori</option><option>Akademik</option><option>Pribadi</option><option>Keluarga</option><option>Sosial</option><option>Karier</option><option>Lainnya</option></select></div>
+              <div class="field-group wide"><label class="field-label" for="studentReason">Alasan Melakukan Konseling</label><textarea class="field" id="studentReason" name="alasan" required></textarea></div>
+              <div class="field-group wide"><label class="field-label" for="studentDetails">Detail Masalah</label><textarea class="field" id="studentDetails" name="detail" required></textarea></div>
+            </div>
+            <p class="privacy-note wide">Data diri tersimpan dengan aman di profil Anda dan dapat digunakan kembali untuk pengajuan berikutnya. Data konseling tetap bersifat rahasia dan tidak disertakan dalam pesan WhatsApp.</p>
+          </div>
+          <div class="modal-actions"><button class="secondary-button" data-close-modal type="button">Batal</button><button class="primary-button" type="submit">Kirim pengajuan</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg><span id="toastMessage"></span></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/supabase-config.js"></script>
+    <script src="assets/supabase.js"></script>
+    <script src="assets/js/index.js"></script>
+  </body>
+</html>

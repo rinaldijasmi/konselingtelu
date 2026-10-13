@@ -1,0 +1,5 @@
+assets/supabase-config.js
+.env
+.env.local
+supabase/.temp/
+.DS_Store

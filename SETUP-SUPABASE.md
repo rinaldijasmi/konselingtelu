@@ -2,7 +2,7 @@
 
 Semua halaman memakai satu proyek Supabase dan role akun yang ditentukan di tabel `profiles`; pengguna tidak memilih role ketika login. Jangan masukkan service-role key ke browser atau file konfigurasi frontend.
 
-Pengguna baru dapat memilih **Daftar sebagai mahasiswa** pada halaman masuk. Akun dibuat lewat Supabase Auth, lalu trigger `on_auth_user_created` membuat profil mahasiswa (`student`) secara otomatis. Pendaftaran publik tidak menerima pilihan role, sehingga pengguna tidak dapat mendaftarkan dirinya sebagai admin atau konselor. Sesudah pendaftaran, pengguna perlu mengonfirmasi email jika konfirmasi email diaktifkan pada Supabase. Data diri mahasiswa dilengkapi saat pengajuan sesi pertama dan disimpan di `profiles`; pengajuan berikutnya hanya meminta informasi sesi konseling.
+Pengguna baru dapat memilih **Daftar sebagai mahasiswa** pada halaman masuk. Akun dibuat lewat Supabase Auth, lalu trigger `on_auth_user_created` membuat profil mahasiswa (`student`) secara otomatis. Pendaftaran publik tidak menerima pilihan role, sehingga pengguna tidak dapat mendaftarkan dirinya sebagai admin atau konselor. Untuk versi saat ini, matikan konfirmasi email di Supabase agar akun baru langsung mendapat sesi login. Data diri mahasiswa dilengkapi saat pengajuan sesi pertama dan disimpan di `profiles`; pengajuan berikutnya hanya meminta informasi sesi konseling.
 
 ## Struktur proyek
 
@@ -20,8 +20,9 @@ Saat mengubah tampilan, edit CSS halaman terkait. Untuk perilaku halaman, edit b
 2. Buka **SQL Editor**, jalankan seluruh isi [`supabase/schema.sql`](./supabase/schema.sql).
 3. Buka **Project Settings → API** dan salin Project URL serta `anon`/publishable key.
 4. Salin `assets/supabase-config.example.js` menjadi `assets/supabase-config.js`, lalu isikan URL dan anon key. File konfigurasi ini diabaikan Git.
-5. Buka **Authentication → URL Configuration**, atur Site URL dan Redirect URLs ke alamat lokal yang dipakai untuk menjalankan preview (misalnya `http://localhost:8000/index.html` dan `http://127.0.0.1:8000/index.html`). Pastikan penyedia email Supabase dikonfigurasi bila konfirmasi email diwajibkan.
-6. Deploy Edge Functions untuk pembuatan akun staf dan penggantian kata sandi awal:
+5. Buka **Authentication → URL Configuration**, atur Site URL dan Redirect URLs ke alamat lokal yang dipakai untuk menjalankan preview (misalnya `http://localhost:8000/index.html` dan `http://127.0.0.1:8000/index.html`).
+6. Agar akun mahasiswa dapat langsung digunakan setelah pendaftaran, buka **Authentication → Providers → Email** dan nonaktifkan **Confirm email**. Pendaftaran tetap memakai Supabase Auth dan kata sandi; hanya verifikasi email yang dilewati. Aktifkan kembali verifikasi email ketika kebijakan layanan mengharuskannya. Tanpa verifikasi email, sistem tidak memastikan bahwa pendaftar menguasai alamat email yang digunakan.
+7. Deploy Edge Functions untuk pembuatan akun staf dan penggantian kata sandi awal:
 
 ```sh
 supabase functions deploy create-counselor --project-ref YOUR_PROJECT_ID
@@ -65,6 +66,14 @@ Jalankan seluruh isi [`supabase/fix-profile-rls-recursion.sql`](./supabase/fix-p
 Untuk proyek yang sudah menjalankan skema lama, jalankan seluruh isi [`supabase/service-scheduling-revision.sql`](./supabase/service-scheduling-revision.sql) satu kali melalui **SQL Editor → New query**. Migrasi ini mempertahankan pengaturan jam mingguan yang sudah ada, menambahkan slot terpisah Online/Tatap muka dan pengecualian tanggal tertentu, serta memperbarui fungsi ketersediaan jadwal. Setelah berhasil, muat ulang aplikasi.
 
 Admin kemudian dapat menambahkan sesi terkonfirmasi melalui **Jadwal & jam layanan → Tambah sesi konseling**. Pada pengaturan jam, pilih tanggal, jenis sesi, lalu pilih apakah perubahan berlaku untuk tanggal itu saja atau berulang setiap minggu. Slot yang dipilih tetap dibatasi pada pukul 08.00–16.00 dan dicek kembali di database.
+
+### Data program studi dan filter laporan
+
+Form pengajuan mahasiswa menyediakan pilihan fakultas kampus utama dan program studi yang mengikuti fakultas terpilih. Kelas internasional, lanjutan, PJJ, serta variasi reguler/blended digabung ke satu program studi; kampus Jakarta, Surabaya, dan Purwokerto tidak disertakan. Dashboard admin dapat difilter dengan rentang tanggal, sementara **Laporan Konseling** dapat difilter berdasarkan rentang tanggal sesi, fakultas, program studi, dan konselor.
+
+### Sesi manual untuk mahasiswa tanpa akun
+
+Jalankan [`supabase/manual-guest-students.sql`](./supabase/manual-guest-students.sql) di SQL Editor sebelum menggunakan pilihan **Mahasiswa belum terdaftar** pada formulir **Tambah sesi konseling**. Mahasiswa tamu dicatat sebagai data kontak tanpa membuat akun Auth/login; NIM harus unik dan digunakan kembali bila mahasiswa tersebut dijadwalkan lagi. Data tamu dibatasi ke admin dan konselor yang ditugaskan.
 
 ### Mengaktifkan superadmin
 

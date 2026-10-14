@@ -170,12 +170,23 @@
     if (!includeProfiles || !appointments.length) return appointments;
 
     const profileIds = [...new Set(appointments.flatMap(appointment => [appointment.student_id, appointment.counselor_id]).filter(Boolean))];
-    const { data: profiles, error: profileError } = await client.from("profiles").select("*").in("id", profileIds);
-    if (profileError) throw profileError;
-    const byId = new Map(profiles.map(profile => [profile.id, profile]));
+    const guestStudentIds = [...new Set(appointments.map(appointment => appointment.guest_student_id).filter(Boolean))];
+    const [profilesResult, guestStudentsResult] = await Promise.all([
+      profileIds.length
+        ? client.from("profiles").select("*").in("id", profileIds)
+        : Promise.resolve({ data: [], error: null }),
+      guestStudentIds.length
+        ? client.from("guest_students").select("*").in("id", guestStudentIds)
+        : Promise.resolve({ data: [], error: null })
+    ]);
+    if (profilesResult.error) throw profilesResult.error;
+    if (guestStudentsResult.error) throw guestStudentsResult.error;
+    const byId = new Map(profilesResult.data.map(profile => [profile.id, profile]));
+    const guestStudentsById = new Map(guestStudentsResult.data.map(student => [student.id, student]));
     return appointments.map(appointment => ({
       ...appointment,
       student: byId.get(appointment.student_id) || null,
+      guestStudent: guestStudentsById.get(appointment.guest_student_id) || null,
       counselor: byId.get(appointment.counselor_id) || null
     }));
   }

@@ -11,6 +11,40 @@
         userName: "Alya Rahma",
         requests: []
       };
+      const programsByFaculty = {
+        "Fakultas Teknik Elektro (FTE)": [
+          "S1 Teknik Telekomunikasi", "S1 Teknik Elektro", "S1 Teknik Komputer", "S1 Smart Science & Technology",
+          "S1 Teknik Biomedis", "S1 Electrical Energy Engineering", "S2 Teknik Elektro (MTE)", "S3 Teknik Elektro (Doktoral)"
+        ],
+        "Fakultas Rekayasa Industri (FRI)": [
+          "S1 Sistem Informasi", "S1 Teknik Industri", "S1 Digital Supply Chain", "S1 Manajemen Rekayasa Industri",
+          "S2 Sistem Informasi (MSI)", "S2 Teknik Industri (MTI)"
+        ],
+        "Fakultas Informatika (FIF)": [
+          "S1 Informatika", "S1 Rekayasa Perangkat Lunak", "S1 Teknologi Informasi (Cyber Security & Digital Innovation)",
+          "S1 Sains Data", "S2 Informatika", "S2 Cyber Security & Digital Forensics", "S3 Informatika (Doktoral)"
+        ],
+        "Fakultas Ekonomi dan Bisnis (FEB)": [
+          "S1 Manajemen Bisnis Telekomunikasi & Informatika (MBTI)", "S1 Akuntansi", "S1 Administrasi Bisnis",
+          "S1 Leisure Management", "S1 Bisnis Digital (Digital Business)", "S2 Manajemen (MM)",
+          "S2 Akuntansi (MAKSI)", "S2 Administrasi Bisnis (MBA)", "S3 Manajemen (Doktoral)"
+        ],
+        "Fakultas Komunikasi dan Ilmu Sosial (FKS)": [
+          "S1 Ilmu Komunikasi", "S1 Digital Public Relation", "S1 Digital Content Broadcasting",
+          "S1 Psikologi (Digital Psychology)", "S2 Ilmu Komunikasi (MIKOM)"
+        ],
+        "Fakultas Industri Kreatif (FIK)": [
+          "S1 Desain Komunikasi Visual", "S1 Desain Interior", "S1 Desain Produk & Inovasi",
+          "S1 Kriya (Fashion & Textile Design)", "S1 Artpreneurship", "S1 Film dan Animasi", "S2 Desain (MDS)"
+        ],
+        "Fakultas Ilmu Terapan (FIT)": [
+          "D3 Teknologi Telekomunikasi", "D3 Teknik Informatika", "D3 Sistem Informasi", "D3 Teknik Komputer",
+          "D3 Digital Accounting (Sistem Informasi Akuntansi)", "D3 Digital Marketing", "D3 Hospitality & Culinary Art",
+          "S1 Terapan Digital Creative Multimedia", "S1 Terapan Sistem Informasi Kota Cerdas",
+          "S2 Terapan Rekayasa Teknologi Informasi"
+        ],
+        "Fakultas Kedokteran (FK)": ["S1 Kedokteran"]
+      };
 
       const $ = (selector, root = document) => root.querySelector(selector);
       const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -32,6 +66,22 @@
       let toastTimer;
       let showingSignup = false;
       $("#studentBirthDate").max = dateKey(today);
+
+      function populateProgramOptions(selectedProgram = "") {
+        const faculty = $("#studentFaculty").value;
+        const programSelect = $("#studentProgram");
+        programSelect.replaceChildren(new Option("Pilih program studi", ""));
+        (programsByFaculty[faculty] || []).forEach(program => programSelect.add(new Option(program, program)));
+        if (selectedProgram && ![...programSelect.options].some(option => option.value === selectedProgram)) {
+          programSelect.add(new Option(`${selectedProgram} (data tersimpan)`, selectedProgram));
+        }
+        programSelect.value = selectedProgram;
+      }
+
+      Object.keys(programsByFaculty).forEach(faculty => {
+        $("#studentFaculty").add(new Option(faculty, faculty));
+      });
+      $("#studentFaculty").addEventListener("change", () => populateProgramOptions());
 
       function slotsForDate(date) {
         return state.availableSlots[dateKey(date)] || [];
@@ -270,8 +320,12 @@
         $("#dashboard").hidden = false;
         setDashboardName(profile.full_name || "");
         $("#studentNim").value = profile.nim || "";
-        $("#studentProgram").value = profile.program || "";
         $("#studentFaculty").value = profile.faculty || "";
+        if (profile.faculty && ![...$("#studentFaculty").options].some(option => option.value === profile.faculty)) {
+          $("#studentFaculty").add(new Option(`${profile.faculty} (data tersimpan)`, profile.faculty));
+          $("#studentFaculty").value = profile.faculty;
+        }
+        populateProgramOptions(profile.program || "");
         $("#studentPhone").value = profile.phone || "";
         $("#studentBirthDate").value = profile.birth_date || "";
         $("#studentEthnicity").value = profile.ethnicity || "";
@@ -315,7 +369,7 @@
         showingSignup = !showingSignup;
         $("#loginTitle").textContent = showingSignup ? "Buat akun mahasiswa" : "Masuk ke akun Anda";
         $(".login-intro").textContent = showingSignup
-          ? "Daftar untuk mengakses layanan konseling mahasiswa Telkom University."
+          ? "Buat akun mahasiswa untuk mengakses layanan konseling Telkom University. Anda dapat langsung masuk setelah akun berhasil dibuat."
           : "Akses layanan konseling dengan mudah dan nyaman. Masukkan akun Telkom University Anda untuk melanjutkan.";
         $("#loginForm").hidden = showingSignup;
         $("#signupForm").hidden = !showingSignup;
@@ -350,7 +404,7 @@
             return;
           }
           signupForm.reset();
-          signupNotice.textContent = "Akun mahasiswa berhasil dibuat. Periksa email Anda dan klik tautan konfirmasi sebelum masuk.";
+          signupNotice.textContent = "Akun berhasil dibuat, tetapi login otomatis belum tersedia. Pastikan konfirmasi email dinonaktifkan di Supabase, lalu masuk dengan email dan kata sandi Anda.";
         } catch (error) {
           signupNotice.textContent = error.message || "Pendaftaran gagal. Silakan coba kembali.";
         }
@@ -514,4 +568,3 @@
           }
         })();
       }
-

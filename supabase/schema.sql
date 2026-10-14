@@ -31,6 +31,17 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.guest_students (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null,
+  nim text not null unique,
+  program text not null,
+  faculty text not null,
+  phone text not null,
+  created_by uuid not null references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.staff_account_registry (
   user_id uuid primary key references public.profiles(id) on delete cascade,
   account_email text not null,
@@ -41,7 +52,8 @@ create table if not exists public.staff_account_registry (
 create table if not exists public.appointments (
   id uuid primary key default gen_random_uuid(),
   code text not null unique default ('KN-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))),
-  student_id uuid not null references public.profiles(id),
+  student_id uuid references public.profiles(id),
+  guest_student_id uuid references public.guest_students(id),
   counselor_id uuid references public.profiles(id),
   requested_date date not null,
   requested_start_time time,
@@ -61,6 +73,7 @@ create table if not exists public.appointments (
   reminder_counselor_opened boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  check (num_nonnulls(student_id, guest_student_id) = 1),
   check ((status not in ('confirmed', 'completed')) or (counselor_id is not null and scheduled_date is not null and start_time is not null and end_time is not null)),
   check (end_time is null or start_time is null or end_time > start_time)
 );
@@ -105,6 +118,10 @@ create table if not exists public.service_date_overrides (
 create unique index if not exists appointments_one_active_counselor_slot
 on public.appointments (counselor_id, scheduled_date, start_time)
 where counselor_id is not null and status in ('confirmed', 'completed');
+
+create index if not exists appointments_guest_student_id_idx
+on public.appointments (guest_student_id)
+where guest_student_id is not null;
 
 create unique index if not exists appointments_one_confirmed_service_slot
 on public.appointments (scheduled_date, start_time, mode)
@@ -478,15 +495,16 @@ end;
 $$;
 
 alter table public.profiles enable row level security;
+alter table public.guest_students enable row level security;
 alter table public.appointments enable row level security;
 alter table public.counseling_reports enable row level security;
 alter table public.service_hours enable row level security;
 alter table public.service_date_overrides enable row level security;
 alter table public.staff_account_registry enable row level security;
 
-revoke all on public.profiles, public.appointments, public.counseling_reports, public.service_hours, public.service_date_overrides from anon, public;
-grant select, insert, update, delete on public.profiles, public.appointments, public.counseling_reports, public.service_hours, public.service_date_overrides to authenticated;
-grant all on public.profiles, public.appointments, public.counseling_reports, public.service_hours, public.service_date_overrides to service_role;
+revoke all on public.profiles, public.guest_students, public.appointments, public.counseling_reports, public.service_hours, public.service_date_overrides from anon, public;
+grant select, insert, update, delete on public.profiles, public.guest_students, public.appointments, public.counseling_reports, public.service_hours, public.service_date_overrides to authenticated;
+grant all on public.profiles, public.guest_students, public.appointments, public.counseling_reports, public.service_hours, public.service_date_overrides to service_role;
 revoke all on public.staff_account_registry from anon, public;
 grant select on public.staff_account_registry to authenticated;
 grant all on public.staff_account_registry to service_role;
@@ -512,6 +530,25 @@ drop policy if exists "admins manage profiles" on public.profiles;
 create policy "admins manage profiles" on public.profiles
 for all to authenticated using (public.is_admin())
 with check (public.is_admin());
+
+drop policy if exists "admins manage guest students" on public.guest_students;
+create policy "admins manage guest students" on public.guest_students
+for all to authenticated using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "assigned counselors read guest students" on public.guest_students;
+create policy "assigned counselors read guest students" on public.guest_students
+for select to authenticated using (
+  exists (
+    select 1
+    from public.appointments a
+    join public.profiles p on p.id = auth.uid()
+    where a.guest_student_id = guest_students.id
+      and a.counselor_id = auth.uid()
+      and p.role = 'counselor'
+      and p.is_active
+  )
+);
 
 drop policy if exists "students read own appointments" on public.appointments;
 create policy "students read own appointments" on public.appointments

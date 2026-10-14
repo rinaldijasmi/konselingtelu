@@ -98,6 +98,8 @@
       const state = {
         view: "overview",
         range: 30,
+        dashboardStartDate: null,
+        dashboardEndDate: null,
         month: new Date(today.getFullYear(), today.getMonth(), 1),
         selectedDate: new Date(today),
         selectedDay: today.getDay(),
@@ -163,6 +165,7 @@
         }));
         sampleAppointments.splice(0, sampleAppointments.length, ...appointments.map(record => {
           const student = record.student || {};
+          const guestStudent = record.guestStudent || {};
           const counselorProfile = record.counselor || {};
           const start = record.start_time || record.requested_start_time;
           const end = record.end_time || record.requested_end_time;
@@ -171,11 +174,11 @@
             dbId: record.id,
             date: parseDate(record.scheduled_date || record.requested_date),
             time: window.counselingBackend.displayTime(start, end),
-            name: student.full_name || "Mahasiswa",
-            nim: student.nim || "",
-            faculty: student.faculty || "",
-            program: student.program || "",
-            phone: student.phone || "",
+            name: student.full_name || guestStudent.full_name || "Mahasiswa",
+            nim: student.nim || guestStudent.nim || "",
+            faculty: student.faculty || guestStudent.faculty || "",
+            program: student.program || guestStudent.program || "",
+            phone: student.phone || guestStudent.phone || "",
             birthDate: student.birth_date || "",
             ethnicity: student.ethnicity || "",
             religion: student.religion || "",
@@ -228,7 +231,7 @@
         const reportRows = await window.counselingBackend.loadReports(client, appointments);
         const reportsByNim = new Map();
         reportRows.forEach(row => {
-          const student = row.appointment?.student;
+          const student = row.appointment?.student || row.appointment?.guestStudent;
           if (!student?.nim) return;
           if (!reportsByNim.has(student.nim)) reportsByNim.set(student.nim, []);
           reportsByNim.get(student.nim).push({
@@ -322,10 +325,16 @@
       }
 
       function renderLiveOverview() {
-        const rangeDays = state.range;
-        const rangeStart = new Date(today);
-        rangeStart.setDate(today.getDate() - rangeDays + 1);
-        const reportAppointments = sampleAppointments.filter(item => item.createdAt >= rangeStart);
+        const rangeStart = state.dashboardStartDate ? parseDate(state.dashboardStartDate) : new Date(today);
+        const rangeEnd = state.dashboardEndDate ? parseDate(state.dashboardEndDate) : new Date(today);
+        if (!state.dashboardStartDate) rangeStart.setDate(today.getDate() - state.range + 1);
+        const rangeDays = Math.max(1, Math.round((rangeEnd - rangeStart) / 86400000) + 1);
+        const rangeLabel = state.dashboardStartDate
+          ? `${formatDate(rangeStart, { day: "numeric", month: "short" })} – ${formatDate(rangeEnd, { day: "numeric", month: "short", year: "numeric" })}`
+          : `${state.range} hari terakhir`;
+        const reportAppointments = sampleAppointments.filter(item =>
+          dateKey(item.createdAt) >= dateKey(rangeStart) && dateKey(item.createdAt) <= dateKey(rangeEnd)
+        );
         const total = reportAppointments.length;
         const rangeSessions = reportAppointments.filter(item => item.status === "Terkonfirmasi" || item.status === "Terlaksana");
         const completed = rangeSessions.filter(item => item.status === "Terlaksana").length;
@@ -347,7 +356,7 @@
         $$(".metric-card").forEach(card => {
           const label = $(".metric-label", card).textContent;
           if (label === "Jumlah terjadwal") $(".metric-change", card).textContent = percentText(scheduledPercent);
-          $(".metric-note", card).textContent = "Data tersimpan di database";
+          $(".metric-note", card).textContent = rangeLabel;
         });
         $$('[data-total="applications"]').forEach(element => { element.textContent = `${total.toLocaleString("id-ID")} pengajuan`; });
         $$('[data-total="scheduled"]').forEach(element => { element.textContent = `${scheduled.toLocaleString("id-ID")} terjadwal`; });
@@ -389,16 +398,15 @@
           element.textContent = `${count} sesi · ${channelTotal ? Math.round(count / channelTotal * 100) : 0}%`;
         });
 
-        const bucketDays = rangeDays / 7;
         const buckets = Array.from({ length: 7 }, (_, index) => {
           const start = new Date(rangeStart);
-          start.setDate(rangeStart.getDate() + Math.floor(index * bucketDays));
+          start.setDate(rangeStart.getDate() + Math.floor(index * rangeDays / 7));
           const end = new Date(rangeStart);
-          end.setDate(rangeStart.getDate() + Math.floor((index + 1) * bucketDays));
+          end.setDate(rangeStart.getDate() + Math.floor((index + 1) * rangeDays / 7));
           return {
             start,
-            requests: sampleAppointments.filter(item => item.createdAt >= start && item.createdAt < end).length,
-            completed: sampleAppointments.filter(item => item.status === "Terlaksana" && item.date >= start && item.date < end).length
+            requests: reportAppointments.filter(item => item.createdAt >= start && item.createdAt < end).length,
+            completed: reportAppointments.filter(item => item.status === "Terlaksana" && item.date >= start && item.date < end).length
           };
         });
         const maxValue = Math.max(1, ...buckets.flatMap(item => [item.requests, item.completed]));
@@ -417,7 +425,7 @@
         $$('text.chart-axis-label[text-anchor="middle"]').forEach((label, index) => {
           label.textContent = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(buckets[index].start);
         });
-        $("#chartPeriod").textContent = `${rangeDays} hari terakhir`;
+        $("#chartPeriod").textContent = rangeLabel;
       }
 
       function appointmentsForDate(date) {
@@ -1002,9 +1010,35 @@
 
       function renderCounselingReports() {
         const query = $("#reportSearch").value.trim().toLocaleLowerCase("id-ID");
+        const dateFrom = $("#reportDateFrom").value;
+        const dateTo = $("#reportDateTo").value;
+        const facultyFilter = $("#reportFacultyFilter").value;
+        const programFilter = $("#reportProgramFilter").value;
+        const counselorFilter = $("#reportCounselorFilter").value;
+        const message = $("#reportFilterMessage");
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+          message.textContent = "Tanggal mulai harus sebelum atau sama dengan tanggal akhir.";
+          $("#reportStudentList").replaceChildren();
+          $("#reportDetail").innerHTML = '<div class="review-empty">Periksa rentang tanggal laporan.</div>';
+          return;
+        }
+        message.textContent = "";
         const students = counselingReports
-          .map(report => ({ report, student: sampleAppointments.find(appointment => appointment.nim === report.nim) }))
-          .filter(({ report, student }) => student && (
+          .map(report => ({
+            report: {
+              ...report,
+              sessions: report.sessions.filter(session => {
+                const sessionDate = dateKey(session.date);
+                return (!dateFrom || sessionDate >= dateFrom) &&
+                  (!dateTo || sessionDate <= dateTo) &&
+                  (!counselorFilter || session.counselor === counselorFilter);
+              })
+            },
+            student: sampleAppointments.find(appointment => appointment.nim === report.nim)
+          }))
+          .filter(({ report, student }) => student && report.sessions.length > 0 &&
+            (!facultyFilter || student.faculty === facultyFilter) &&
+            (!programFilter || student.program === programFilter) && (
             !query ||
             student.name.toLocaleLowerCase("id-ID").includes(query) ||
             report.nim.includes(query)
@@ -1039,6 +1073,37 @@
           list.append(button);
         });
         renderCounselingReportDetail(students.find(({ report }) => report.nim === state.selectedReportNim));
+      }
+
+      function setReportFilterOptions(select, placeholder, values) {
+        const currentValue = select.value;
+        select.replaceChildren(new Option(placeholder, ""));
+        [...new Set(values.filter(Boolean))]
+          .sort((left, right) => left.localeCompare(right, "id-ID"))
+          .forEach(value => select.add(new Option(value, value)));
+        if ([...select.options].some(option => option.value === currentValue)) select.value = currentValue;
+      }
+
+      function updateReportProgramOptions() {
+        const faculty = $("#reportFacultyFilter").value;
+        const programs = counselingReports.flatMap(report => {
+          const student = sampleAppointments.find(appointment => appointment.nim === report.nim);
+          return student && (!faculty || student.faculty === faculty) ? [student.program] : [];
+        });
+        setReportFilterOptions($("#reportProgramFilter"), "Semua program studi", programs);
+      }
+
+      function refreshReportFilterOptions() {
+        const students = counselingReports
+          .map(report => sampleAppointments.find(appointment => appointment.nim === report.nim))
+          .filter(Boolean);
+        setReportFilterOptions($("#reportFacultyFilter"), "Semua fakultas", students.map(student => student.faculty));
+        updateReportProgramOptions();
+        setReportFilterOptions(
+          $("#reportCounselorFilter"),
+          "Semua konselor",
+          counselingReports.flatMap(report => report.sessions.map(session => session.counselor))
+        );
       }
 
       function renderCounselingReportDetail(entry) {
@@ -1361,6 +1426,9 @@
         $("#manualDate").min = dateKey(today);
         $("#manualDate").value = dateKey(state.selectedDate);
         $("#manualMode").value = "Online";
+        $("#manualStudentMode").value = "registered";
+        $("#manualGuestFields").querySelectorAll("input").forEach(input => { input.value = ""; });
+        updateManualStudentMode();
         $("#manualSessionMessage").textContent = "";
         updateManualLocationField();
         renderManualSessionTimes();
@@ -1379,15 +1447,31 @@
       function closeAddSession() {
         $("#addSessionBackdrop").hidden = true;
         $("#manualSessionForm").reset();
+        updateManualStudentMode();
         $("#manualSessionMessage").textContent = "";
+      }
+
+      function updateManualStudentMode() {
+        const guestMode = $("#manualStudentMode").value === "guest";
+        $("#registeredStudentField").hidden = guestMode;
+        $("#manualStudent").disabled = guestMode;
+        $("#manualStudent").required = !guestMode;
+        $("#manualGuestFields").hidden = !guestMode;
+        $("#manualGuestFields").querySelectorAll("input").forEach(input => {
+          input.disabled = !guestMode;
+          input.required = guestMode;
+        });
       }
 
       async function createManualSession(event) {
         event.preventDefault();
         if (!event.currentTarget.reportValidity()) return;
-        const student = newScheduleStudents.find(item => item.id === $("#manualStudent").value);
         const counselor = counselors.find(item => item.id === $("#manualCounselor").value && item.active);
-        if (!student || !counselor) {
+        const guestMode = $("#manualStudentMode").value === "guest";
+        let student = guestMode ? null : newScheduleStudents.find(item => item.id === $("#manualStudent").value);
+        let guestStudentId = null;
+        let newGuestStudentId = null;
+        if (!counselor || (!guestMode && !student)) {
           $("#manualSessionMessage").textContent = "Pilih mahasiswa dan konselor yang aktif.";
           return;
         }
@@ -1402,9 +1486,54 @@
           $("#manualSessionMessage").textContent = "Konselor sudah memiliki sesi pada tanggal dan jam itu.";
           return;
         }
+        if (guestMode) {
+          const nim = $("#manualGuestNim").value.trim();
+          const existingStudent = newScheduleStudents.find(item => item.nim === nim);
+          if (existingStudent) {
+            student = existingStudent;
+          } else {
+            const { data: existingGuest, error: guestLookupError } = await adminContext.client
+              .from("guest_students")
+              .select("id")
+              .eq("nim", nim)
+              .maybeSingle();
+            if (guestLookupError) {
+              $("#manualSessionMessage").textContent = `Data mahasiswa gagal diperiksa: ${guestLookupError.message}`;
+              return;
+            }
+            if (existingGuest) {
+              guestStudentId = existingGuest.id;
+            } else {
+              const phone = $("#manualGuestPhone").value.replace(/\D/g, "").replace(/^0/, "62");
+              if (phone.length < 10 || phone.length > 15) {
+                $("#manualSessionMessage").textContent = "Masukkan nomor WhatsApp yang valid.";
+                return;
+              }
+              const { data: createdGuest, error: guestInsertError } = await adminContext.client
+                .from("guest_students")
+                .insert({
+                  full_name: $("#manualGuestName").value.trim().replace(/\s+/g, " "),
+                  nim,
+                  program: $("#manualGuestProgram").value.trim(),
+                  faculty: $("#manualGuestFaculty").value.trim(),
+                  phone,
+                  created_by: adminContext.profile.id
+                })
+                .select("id")
+                .single();
+              if (guestInsertError || !createdGuest) {
+                $("#manualSessionMessage").textContent = `Data mahasiswa baru gagal disimpan: ${guestInsertError?.message || "Tidak ada data yang dikembalikan."}`;
+                return;
+              }
+              guestStudentId = createdGuest.id;
+              newGuestStudentId = createdGuest.id;
+            }
+          }
+        }
         const times = window.counselingBackend.normalizeTime(time);
-        const { error } = await adminContext.client.from("appointments").insert({
-          student_id: student.id,
+        const appointment = {
+          student_id: student?.id || null,
+          guest_student_id: guestStudentId,
           counselor_id: counselor.id,
           requested_date: dateKey(date),
           requested_start_time: times.start_time,
@@ -1418,9 +1547,15 @@
           reason: $("#manualReason").value.trim(),
           issue_details: $("#manualDetails").value.trim(),
           location: $("#manualLocation").value.trim()
-        });
+        };
+        const { error } = await adminContext.client.from("appointments").insert(appointment);
         if (error) {
-          $("#manualSessionMessage").textContent = `Sesi gagal dibuat: ${error.message}`;
+          let message = `Sesi gagal dibuat: ${error.message}`;
+          if (newGuestStudentId) {
+            const { error: cleanupError } = await adminContext.client.from("guest_students").delete().eq("id", newGuestStudentId);
+            if (cleanupError) message += ` Data mahasiswa baru juga gagal dibersihkan: ${cleanupError.message}`;
+          }
+          $("#manualSessionMessage").textContent = message;
           return;
         }
         state.selectedDate = date;
@@ -1551,6 +1686,7 @@
         renderSelectedDay();
         state.selectedApplicationId = sampleAppointments.find(appointment => appointment.status === "Menunggu")?.id || sampleAppointments[0]?.id || null;
         renderApplications();
+        refreshReportFilterOptions();
         renderCounselingReports();
         renderCounselors();
         renderStaffAccounts();
@@ -1567,6 +1703,42 @@
         renderApplications();
       }));
       $("#reportSearch").addEventListener("input", renderCounselingReports);
+      $("#dashboardDateFilter").addEventListener("submit", event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+        const startDate = $("#dashboardDateFrom").value;
+        const endDate = $("#dashboardDateTo").value;
+        if (startDate > endDate) {
+          $("#dashboardDateMessage").textContent = "Tanggal mulai harus sebelum atau sama dengan tanggal akhir.";
+          return;
+        }
+        state.dashboardStartDate = startDate;
+        state.dashboardEndDate = endDate;
+        $$(".range-button").forEach(button => {
+          button.classList.remove("active");
+          button.setAttribute("aria-pressed", "false");
+        });
+        $("#dashboardDateMessage").textContent = `Menampilkan data ${formatDate(parseDate(startDate))} sampai ${formatDate(parseDate(endDate))}.`;
+        renderLiveOverview();
+      });
+      ["#reportDateFrom", "#reportDateTo", "#reportCounselorFilter", "#reportProgramFilter"].forEach(selector => {
+        $(selector).addEventListener("change", renderCounselingReports);
+      });
+      $("#reportFacultyFilter").addEventListener("change", () => {
+        updateReportProgramOptions();
+        renderCounselingReports();
+      });
+      $("#clearReportFilters").addEventListener("click", () => {
+        $("#reportDateFrom").value = "";
+        $("#reportDateTo").value = "";
+        $("#reportFacultyFilter").value = "";
+        updateReportProgramOptions();
+        $("#reportProgramFilter").value = "";
+        $("#reportCounselorFilter").value = "";
+        $("#reportSearch").value = "";
+        renderCounselingReports();
+      });
       $("#showAddCounselor").addEventListener("click", () => {
         $("#counselorFormMessage").textContent = "";
         $("#addCounselorForm").hidden = false;
@@ -1769,6 +1941,11 @@
       });
       $$("[data-range]").forEach(button => button.addEventListener("click", () => {
         state.range = Number(button.dataset.range);
+        state.dashboardStartDate = null;
+        state.dashboardEndDate = null;
+        $("#dashboardDateFrom").value = "";
+        $("#dashboardDateTo").value = "";
+        $("#dashboardDateMessage").textContent = "";
         $$(".range-button").forEach(rangeButton => {
           const active = rangeButton === button;
           rangeButton.classList.toggle("active", active);
@@ -1824,6 +2001,7 @@
       }));
       $("#saveSettings").addEventListener("click", saveSettings);
       $("#showAddSession").addEventListener("click", openAddSession);
+      $("#manualStudentMode").addEventListener("change", updateManualStudentMode);
       $("#manualDate").addEventListener("change", renderManualSessionTimes);
       $("#manualMode").addEventListener("change", () => {
         updateManualLocationField();
@@ -1861,4 +2039,3 @@
           window.counselingBackend.showAuthError(new Error(`Gagal memuat data admin: ${error.message}`));
         }
       });
-

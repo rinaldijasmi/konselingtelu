@@ -52,6 +52,12 @@
                 <button class="range-button" data-range="90" type="button">90 hari</button>
               </div>
             </div>
+            <form class="dashboard-date-filter" id="dashboardDateFilter">
+              <div class="dashboard-date-field"><label for="dashboardDateFrom">Dari tanggal</label><input id="dashboardDateFrom" type="date" required></div>
+              <div class="dashboard-date-field"><label for="dashboardDateTo">Sampai tanggal</label><input id="dashboardDateTo" type="date" required></div>
+              <button class="secondary-button" type="submit">Terapkan rentang</button>
+              <p id="dashboardDateMessage" role="status" aria-live="polite"></p>
+            </form>
             <div class="summary-grid">
               <article class="metric-card"><div class="metric-top"><span class="metric-label">Jumlah pengajuan</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" data-metric="applications">248</strong><span class="metric-change">↑ 12,4%</span></div><div class="metric-note">dibanding periode sebelumnya</div></article>
               <article class="metric-card"><div class="metric-top"><span class="metric-label">Jumlah terjadwal</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" data-metric="scheduled">186</strong><span class="metric-change">75,0%</span></div><div class="metric-note">dari seluruh pengajuan</div></article>
@@ -191,6 +197,15 @@
             <div class="report-layout">
               <section class="panel" aria-labelledby="reportStudentsHeading">
                 <div class="panel-heading"><div><h2 id="reportStudentsHeading">Mahasiswa pernah konseling</h2><p>Pilih mahasiswa untuk melihat riwayat sesi.</p></div></div>
+                <div class="report-filters" aria-label="Filter laporan konseling">
+                  <div class="report-filter-field"><label for="reportDateFrom">Dari tanggal</label><input id="reportDateFrom" type="date"></div>
+                  <div class="report-filter-field"><label for="reportDateTo">Sampai tanggal</label><input id="reportDateTo" type="date"></div>
+                  <div class="report-filter-field"><label for="reportFacultyFilter">Fakultas</label><select id="reportFacultyFilter"><option value="">Semua fakultas</option></select></div>
+                  <div class="report-filter-field"><label for="reportProgramFilter">Program studi</label><select id="reportProgramFilter"><option value="">Semua program studi</option></select></div>
+                  <div class="report-filter-field"><label for="reportCounselorFilter">Konselor</label><select id="reportCounselorFilter"><option value="">Semua konselor</option></select></div>
+                  <button class="secondary-button" id="clearReportFilters" type="button">Reset filter</button>
+                  <p id="reportFilterMessage" role="status" aria-live="polite"></p>
+                </div>
                 <input class="report-search" id="reportSearch" type="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa berdasarkan nama atau NIM">
                 <div class="report-student-list" id="reportStudentList"></div>
               </section>
@@ -241,7 +256,16 @@
         <p class="approval-intro">Buat jadwal terkonfirmasi untuk mahasiswa dan konselor. Sesi akan langsung muncul pada kalender kedua role.</p>
         <form id="manualSessionForm">
           <div class="approval-fields">
-            <div class="approval-field"><label for="manualStudent">Mahasiswa</label><select id="manualStudent" required><option value="">Pilih mahasiswa</option></select></div>
+            <div class="approval-field"><label for="manualStudentMode">Data mahasiswa</label><select id="manualStudentMode"><option value="registered">Mahasiswa terdaftar</option><option value="guest">Mahasiswa belum terdaftar</option></select></div>
+            <div class="approval-field" id="registeredStudentField"><label for="manualStudent">Mahasiswa</label><select id="manualStudent" required><option value="">Pilih mahasiswa</option></select></div>
+            <fieldset class="approval-fields wide manual-guest-fields" id="manualGuestFields" hidden>
+              <legend>Data mahasiswa baru (tanpa akun login)</legend>
+              <div class="approval-field"><label for="manualGuestName">Nama lengkap</label><input id="manualGuestName" autocomplete="name" required disabled></div>
+              <div class="approval-field"><label for="manualGuestNim">NIM</label><input id="manualGuestNim" inputmode="numeric" required disabled></div>
+              <div class="approval-field"><label for="manualGuestProgram">Program studi</label><input id="manualGuestProgram" required disabled></div>
+              <div class="approval-field"><label for="manualGuestFaculty">Fakultas</label><input id="manualGuestFaculty" required disabled></div>
+              <div class="approval-field"><label for="manualGuestPhone">WhatsApp mahasiswa</label><input id="manualGuestPhone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" required disabled></div>
+            </fieldset>
             <div class="approval-field"><label for="manualCounselor">Konselor</label><select id="manualCounselor" required><option value="">Pilih konselor aktif</option></select></div>
             <div class="approval-field"><label for="manualMode">Jenis konseling</label><select id="manualMode" required><option>Online</option><option>Tatap muka</option></select></div>
             <div class="approval-field"><label for="manualDate">Tanggal</label><input id="manualDate" type="date" required></div>

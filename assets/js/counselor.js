@@ -82,7 +82,7 @@
         const mapped = appointments
           .filter(record => record.counselor_id === counselor.id)
           .map(record => {
-            const profile = record.student || {};
+            const profile = record.student || record.guestStudent || {};
             const student = {
               name: profile.full_name || "Mahasiswa",
               nim: profile.nim || "",
@@ -580,4 +580,3 @@
         showToast("Sesi diselesaikan dan laporan ditambahkan ke riwayat konseling.");
       });
       initializeCounselorWorkspace();
-

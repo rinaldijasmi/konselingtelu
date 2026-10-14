@@ -65,6 +65,12 @@
       .range-button { min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: white; color: #716d70; font-size: 9px; }
       .range-button:hover { border-color: #e7c1c7; color: var(--red); }
       .range-button.active { border-color: var(--red); background: var(--red-soft); color: var(--red); font-weight: 650; }
+      .dashboard-date-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: -9px 0 18px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+      .dashboard-date-field, .report-filter-field { display: grid; min-width: 0; gap: 5px; }
+      .dashboard-date-field label, .report-filter-field label { color: #716d70; font-size: 8px; font-weight: 650; }
+      .dashboard-date-field input, .report-filter-field input, .report-filter-field select { width: 100%; min-height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--ink); font: inherit; font-size: 9px; }
+      .dashboard-date-filter .secondary-button, .report-filters .secondary-button { min-height: 34px; padding: 0 11px; font-size: 9px; }
+      #dashboardDateMessage { flex: 1 1 180px; margin: 0; color: var(--muted); font-size: 8px; }
       .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 17px; }
       .metric-card { position: relative; min-height: 103px; overflow: hidden; padding: 16px 16px 14px; border: 1px solid var(--line); border-radius: 9px; background: white; }
       .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -160,6 +166,9 @@
       .review-field strong { display: block; overflow-wrap: anywhere; color: #4f4a4e; font-size: 9px; font-weight: 600; line-height: 1.5; }
       .review-privacy { margin: 12px 0 0; padding: 9px; border-radius: 6px; background: #fbf6f6; color: #766d71; font-size: 8px; line-height: 1.55; }
       .report-layout { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.5fr); gap: 14px; align-items: start; }
+      .report-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 11px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: #fcfbfb; }
+      .report-filters > .secondary-button { grid-column: 1 / -1; }
+      #reportFilterMessage { grid-column: 1 / -1; min-height: 0; margin: 0; color: var(--red); font-size: 8px; line-height: 1.4; }
       .report-search { width: 100%; min-height: 36px; margin-bottom: 11px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; outline: 0; color: var(--ink); font-size: 9px; }
       .report-search:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgb(196 18 48 / 9%); }
       .report-student-list { display: grid; gap: 7px; }
@@ -256,6 +265,8 @@
       .approval-summary { margin-bottom: 14px; padding: 10px; border: 1px solid #f0e6e8; border-radius: 7px; background: #fdf9fa; font-size: 9px; line-height: 1.6; }
       .approval-fields { display: grid; gap: 11px; }
       #manualSessionForm .approval-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #manualSessionForm .manual-guest-fields { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 7px; }
+      .manual-guest-fields legend { padding: 0 5px; color: #716d70; font-size: 9px; font-weight: 650; }
       .approval-field { display: grid; gap: 5px; }
       .approval-field label { font-size: 9px; font-weight: 650; }
       .approval-field input, .approval-field select, .approval-field textarea { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid #e5e1e3; border-radius: 6px; outline: 0; background: white; color: var(--ink); font: inherit; font-size: 10px; }
@@ -403,6 +414,11 @@
         .header-brand { gap: 7px; }
         .product-name { max-width: 81px; line-height: 1.2; }
         .heading-row { align-items: flex-start; }
+        .dashboard-date-filter { align-items: stretch; }
+        .dashboard-date-field { flex: 1 1 120px; }
+        .dashboard-date-filter .secondary-button { flex: 1 1 100%; }
+        .report-filters { grid-template-columns: 1fr; }
+        .report-filters > .secondary-button, #reportFilterMessage { grid-column: auto; }
         .range-controls { max-width: 134px; flex-wrap: wrap; justify-content: flex-end; }
         .range-button { min-height: 28px; padding: 0 7px; font-size: 8px; }
         .summary-grid { gap: 7px; }
@@ -438,4 +454,3 @@
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
       }
-

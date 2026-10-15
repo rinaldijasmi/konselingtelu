@@ -7,7 +7,9 @@
         selectedDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
         filter: "semua",
         selectedSlot: null,
+        selectedCounselor: null,
         availableSlots: {},
+        directory: [],
         userName: "Alya Rahma",
         requests: []
       };
@@ -100,6 +102,10 @@
           const date = String(row.available_date).slice(0, 10);
           if (!state.availableSlots[date]) state.availableSlots[date] = [];
           state.availableSlots[date].push({
+            counselorId: row.counselor_id,
+            directoryId: row.directory_id,
+            counselorName: row.counselor_name,
+            specialties: row.specialties || [],
             time: window.counselingBackend.displayTime(row.start_time, row.end_time),
             mode: row.mode,
             available: true
@@ -150,6 +156,7 @@
           if (!hasSlots) button.disabled = true;
           button.addEventListener("click", () => {
             state.selectedDate = date;
+            state.selectedCounselor = null;
             renderCalendar();
             renderSlots();
           });
@@ -168,19 +175,79 @@
         const slots = visibleSlots(state.selectedDate);
         const matches = slots.filter(slot => slot.available);
         if (!matches.length) {
+          $("#slotHeading").textContent = "Pilih konselor";
+          $("#slotDescription").textContent = "Pilih tanggal, konselor, lalu jam yang tersedia.";
           const empty = document.createElement("div");
           empty.className = "slot-empty";
           empty.textContent = slots.length ? "Belum ada jadwal tersedia untuk pilihan ini. Coba tanggal lain." : "Belum ada jadwal pada tanggal ini. Silakan pilih tanggal bertitik hijau.";
           list.append(empty);
           return;
         }
-        matches.forEach(slot => {
-          const button = document.createElement("button");
-          button.className = "slot-button";
-          button.type = "button";
-          button.innerHTML = `<span><span class="slot-time">${escapeHtml(slot.time)}</span><span class="slot-kind">${escapeHtml(slot.mode)}</span></span><span class="slot-status">Tersedia</span>`;
-          button.addEventListener("click", () => openBooking(slot));
-          list.append(button);
+        if (!state.selectedCounselor) {
+          $("#slotHeading").textContent = "Pilih konselor";
+          $("#slotDescription").textContent = "Pilih konselor untuk melihat jam praktik yang tersedia.";
+          const counselors = new Map();
+          matches.forEach(slot => {
+            if (!counselors.has(slot.directoryId)) {
+              counselors.set(slot.directoryId, { id: slot.directoryId, name: slot.counselorName, specialties: slot.specialties, slots: [] });
+            }
+            counselors.get(slot.directoryId).slots.push(slot);
+          });
+          [...counselors.values()].sort((a, b) => a.name.localeCompare(b.name, "id")).forEach(counselor => {
+            const button = document.createElement("button");
+            button.className = "counselor-choice";
+            button.type = "button";
+            const specialties = counselor.specialties.slice(0, 3).join(" · ");
+            const modes = [...new Set(counselor.slots.map(slot => slot.mode))].join(" / ");
+            button.innerHTML = `<span class="counselor-choice-copy"><strong>${escapeHtml(counselor.name)}</strong><span>${escapeHtml(specialties || "Konseling mahasiswa")}</span><small>${escapeHtml(modes)}</small></span><span class="counselor-choice-count">${counselor.slots.length} jam</span>`;
+            button.addEventListener("click", () => {
+              state.selectedCounselor = counselor;
+              renderSlots();
+            });
+            list.append(button);
+          });
+          return;
+        }
+        $("#slotHeading").textContent = state.selectedCounselor.name;
+        $("#slotDescription").textContent = "Pilih salah satu jam praktik yang tersedia.";
+        const back = document.createElement("button");
+        back.className = "slot-back";
+        back.type = "button";
+        back.textContent = "‹ Kembali ke daftar konselor";
+        back.addEventListener("click", () => {
+          state.selectedCounselor = null;
+          renderSlots();
+        });
+        list.append(back);
+        matches.filter(slot => slot.directoryId === state.selectedCounselor.id)
+          .sort((a, b) => a.time.localeCompare(b.time))
+          .forEach(slot => {
+            const button = document.createElement("button");
+            button.className = "slot-button";
+            button.type = "button";
+            button.innerHTML = `<span><span class="slot-time">${escapeHtml(slot.time)}</span><span class="slot-kind">${escapeHtml(slot.mode)}</span></span><span class="slot-status">Tersedia</span>`;
+            button.addEventListener("click", () => openBooking(slot));
+            list.append(button);
+          });
+      }
+
+      function renderCounselorDirectory() {
+        const list = $("#counselorDirectoryList");
+        list.replaceChildren();
+        if (!state.directory.length) {
+          const empty = document.createElement("p");
+          empty.className = "slot-empty";
+          empty.textContent = "Daftar konselor belum tersedia.";
+          list.append(empty);
+          return;
+        }
+        state.directory.forEach(counselor => {
+          const card = document.createElement("article");
+          card.className = "directory-card";
+          const initials = counselor.full_name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+          const specialties = (counselor.specialties || []).map(escapeHtml).join(" · ");
+          card.innerHTML = `<span class="directory-avatar" aria-hidden="true">${escapeHtml(initials)}</span><div><h3>${escapeHtml(counselor.full_name)}</h3><p>${specialties || "Konselor mahasiswa"}</p><small>${counselor.is_bookable ? "Dapat dipilih untuk jadwal" : "Profil tersedia; jadwal pemesanan belum aktif"}</small></div>`;
+          list.append(card);
         });
       }
 
@@ -209,7 +276,7 @@
           sortedRequests.slice(0, 2).forEach(request => {
             const item = document.createElement("div");
             item.className = "appointment-item";
-            item.innerHTML = `<div class="appointment-date"><strong>${request.date.getDate()}</strong><span>${monthNames[request.date.getMonth()].slice(0, 3)}</span></div><div class="appointment-copy"><strong>${escapeHtml(request.time)} · ${escapeHtml(request.mode)}</strong><span>${escapeHtml(formatDate(request.date, { weekday: "long", month: "long", year: "numeric" }))}${request.counselor ? ` · ${escapeHtml(request.counselor)}` : ""}</span></div><span class="status-badge ${request.status === "Terkonfirmasi" ? "confirmed" : ""}">${escapeHtml(request.status)}</span>`;
+            item.innerHTML = `<div class="appointment-date"><strong>${request.date.getDate()}</strong><span>${monthNames[request.date.getMonth()].slice(0, 3)}</span></div><div class="appointment-copy"><strong>${escapeHtml(request.time)} · ${escapeHtml(request.mode)}</strong><span>${escapeHtml(formatDate(request.date, { weekday: "long", month: "long", year: "numeric" }))}${request.counselor ? ` · ${escapeHtml(request.counselor)}` : ""}</span>${request.note ? `<small class="appointment-note">${escapeHtml(request.note)}</small>` : ""}</div><span class="status-badge ${request.status === "Terkonfirmasi" ? "confirmed" : ""}">${escapeHtml(request.status)}</span>`;
             appointmentList.append(item);
           });
         }
@@ -224,7 +291,7 @@
           sortedRequests.forEach(request => {
             const item = document.createElement("article");
             item.className = "history-item";
-            item.innerHTML = `<div><h3>Pengajuan ${escapeHtml(request.id)}</h3><p>${escapeHtml(formatDate(request.date))} · ${escapeHtml(request.time)} · ${escapeHtml(request.mode)}${request.counselor ? ` · ${escapeHtml(request.counselor)}` : ""}</p></div><span class="status-badge ${request.status === "Terkonfirmasi" ? "confirmed" : ""}">${escapeHtml(request.status)}</span>`;
+            item.innerHTML = `<div><h3>Pengajuan ${escapeHtml(request.id)}</h3><p>${escapeHtml(formatDate(request.date))} · ${escapeHtml(request.time)} · ${escapeHtml(request.mode)}${request.counselor ? ` · ${escapeHtml(request.counselor)}` : ""}</p>${request.note ? `<p class="appointment-note">${escapeHtml(request.note)}</p>` : ""}</div><span class="status-badge ${request.status === "Terkonfirmasi" ? "confirmed" : ""}">${escapeHtml(request.status)}</span>`;
             historyList.append(item);
           });
         }
@@ -246,7 +313,7 @@
       function openBooking(slot) {
         state.selectedSlot = slot;
         $("#bookingDate").textContent = formatDate(state.selectedDate);
-        $("#bookingSession").textContent = `${slot.time} · ${slot.mode} · 60 menit`;
+        $("#bookingSession").textContent = `${slot.counselorName} · ${slot.time} · ${slot.mode} · 60 menit`;
         const personalFields = $("#personalFields");
         const savedProfileSummary = $("#savedProfileSummary");
         const profileComplete = hasCompleteStudentProfile(studentProfile);
@@ -296,6 +363,7 @@
         const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         if (nextMonth < currentMonth) return;
         state.month = nextMonth;
+        state.selectedCounselor = null;
         try {
           await refreshAvailability(nextMonth);
         } catch (error) {
@@ -335,6 +403,7 @@
         $("#studentBirthOrder").value = profile.birth_order || "";
         $("#studentSiblingCount").value = profile.sibling_count ?? "";
         const client = window.counselingBackend.getClient();
+        state.directory = await window.counselingBackend.loadCounselorDirectory(client);
         const records = await window.counselingBackend.loadAppointments(client);
         state.requests = records.map(record => ({
           id: record.code,
@@ -345,8 +414,10 @@
             record.end_time || record.requested_end_time
           ),
           mode: record.mode,
-          status: ({ pending: "Menunggu", confirmed: "Terkonfirmasi", completed: "Terlaksana", rejected: "Ditolak" })[record.status],
-          counselor: record.counselor?.full_name || ""
+          status: ({ pending: "Menunggu", confirmed: "Terkonfirmasi", completed: "Terlaksana", rejected: "Ditolak", cancelled: "Dibatalkan", no_response: "Tidak ada respons" })[record.status] || "Status diperbarui",
+          counselor: record.counselor?.full_name ||
+            state.directory.find(entry => entry.directory_id === record.counselor_directory_id)?.full_name || "",
+          note: record.admin_close_reason || ""
         }));
         await refreshAvailability(state.month);
         renderCalendar();
@@ -434,6 +505,7 @@
       });
       $$(".filter-button").forEach(button => button.addEventListener("click", () => {
         state.filter = button.dataset.filter;
+        state.selectedCounselor = null;
         $$(".filter-button").forEach(filterButton => {
           const active = filterButton === button;
           filterButton.classList.toggle("active", active);
@@ -445,11 +517,20 @@
       $$("[data-view]").forEach(button => button.addEventListener("click", () => updateView(button.dataset.view)));
       $$("[data-open-history]").forEach(button => button.addEventListener("click", () => updateView("history")));
       $$("[data-close-modal]").forEach(button => button.addEventListener("click", closeBooking));
+      $("#openCounselorDirectory").addEventListener("click", () => {
+        renderCounselorDirectory();
+        $("#directoryBackdrop").hidden = false;
+      });
+      $("#closeCounselorDirectory").addEventListener("click", () => { $("#directoryBackdrop").hidden = true; });
+      $("#directoryBackdrop").addEventListener("click", event => {
+        if (event.target === $("#directoryBackdrop")) $("#directoryBackdrop").hidden = true;
+      });
       $("#bookingBackdrop").addEventListener("click", event => {
         if (event.target === $("#bookingBackdrop")) closeBooking();
       });
       document.addEventListener("keydown", event => {
         if (event.key === "Escape" && !$("#bookingBackdrop").hidden) closeBooking();
+        if (event.key === "Escape" && !$("#directoryBackdrop").hidden) $("#directoryBackdrop").hidden = true;
       });
       $("#bookingForm").addEventListener("submit", async event => {
         event.preventDefault();
@@ -495,6 +576,8 @@
           const times = window.counselingBackend.normalizeTime(state.selectedSlot.time);
           const { data: created, error } = await client.from("appointments").insert({
             student_id: studentProfile.id,
+            counselor_id: state.selectedSlot.counselorId,
+            counselor_directory_id: state.selectedSlot.directoryId,
             requested_date: dateKey(state.selectedDate),
             requested_start_time: times.start_time,
             requested_end_time: times.end_time,
@@ -513,12 +596,14 @@
             time: window.counselingBackend.displayTime(created.requested_start_time, created.requested_end_time),
             mode: created.mode,
             status: "Menunggu",
-            counselor: ""
+            counselor: state.selectedSlot.counselorName,
+            note: ""
           };
           Object.assign(studentProfile, profile);
           state.requests.unshift(newRequest);
           state.availableSlots[dateKey(state.selectedDate)] = slotsForDate(state.selectedDate)
-            .filter(slot => slot.time !== newRequest.time || slot.mode !== newRequest.mode);
+            .filter(slot => slot.directoryId !== state.selectedSlot.directoryId || slot.time !== newRequest.time || slot.mode !== newRequest.mode);
+          state.selectedCounselor = null;
           closeBooking();
           renderRequests();
           renderCalendar();

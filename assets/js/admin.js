@@ -119,6 +119,13 @@
         approvingApplicationId: null,
         editingApplicationId: null,
         staffAccounts: [],
+        counselorDirectory: [],
+        counselorAvailability: [],
+        counselorDateOverrides: [],
+        counselorScheduleReady: true,
+        directoryBookingReady: true,
+        directoryManagementReady: true,
+        closingAppointmentId: null,
         selectedReportNim: counselingReports[0].nim
       };
       const $ = (selector, root = document) => root.querySelector(selector);
@@ -138,26 +145,68 @@
       let toastTimer;
       let adminContext = null;
 
+      async function loadCounselorDirectory(client) {
+        const result = await client.from("counselor_directory")
+          .select("id,source_key,full_name,specialties,phone,contact_email,linked_profile_id,is_listed")
+          .order("full_name");
+        if (!result.error) return { data: result.data, managementReady: true };
+        if (result.error.code !== "42703") throw result.error;
+
+        const legacyResult = await client.from("counselor_directory")
+          .select("id,source_key,full_name,specialties,linked_profile_id,is_listed")
+          .order("full_name");
+        if (legacyResult.error) throw legacyResult.error;
+        return {
+          data: legacyResult.data.map(entry => ({
+            ...entry,
+            phone: "",
+            contact_email: `${entry.source_key}@example.invalid`
+          })),
+          managementReady: false
+        };
+      }
+
+      async function loadCounselorDateOverrides(client) {
+        const result = await client.from("counselor_date_overrides")
+          .select("directory_id,available_date,mode,open_slots");
+        if (!result.error) return { data: result.data, scheduleReady: true };
+        if (!["42P01", "PGRST205"].includes(result.error.code)) throw result.error;
+        return { data: [], scheduleReady: false };
+      }
+
       async function loadAdminData(context) {
         const { client } = context;
         const staffRegistryQuery = context.profile.role === "superadmin"
           ? client.from("staff_account_registry").select("user_id,account_email")
           : Promise.resolve({ data: [], error: null });
-        const [appointments, profilesResult, settingsResult, overrideResult, studentsResult, staffProfilesResult, staffRegistryResult] = await Promise.all([
+        const [appointments, directoryResult, counselorProfilesResult, availabilityResult, counselorDateOverridesResult, directoryBookingResult, serviceHoursResult, dateOverridesResult, studentProfilesResult, staffProfilesResult, staffRegistryResult] = await Promise.all([
           window.counselingBackend.loadAppointments(client),
+          loadCounselorDirectory(client),
           client.from("profiles").select("*").eq("role", "counselor").order("full_name"),
+          client.from("counselor_availability").select("directory_id,weekday,mode,open_slots"),
+          loadCounselorDateOverrides(client),
+          client.from("appointments").select("counselor_directory_id").limit(1),
           client.from("service_hours").select("*").order("weekday"),
           client.from("service_date_overrides").select("*").gte("available_date", dateKey(today)),
           client.from("profiles").select("id,full_name,nim").eq("role", "student").order("full_name"),
           client.from("profiles").select("id,full_name,role,is_active,must_change_password").in("role", ["admin", "counselor"]).order("full_name"),
           staffRegistryQuery
         ]);
-        if (profilesResult.error) throw profilesResult.error;
-        if (settingsResult.error) throw settingsResult.error;
-        if (overrideResult.error) throw overrideResult.error;
-        if (studentsResult.error) throw studentsResult.error;
+        if (counselorProfilesResult.error) throw counselorProfilesResult.error;
+        if (availabilityResult.error) throw availabilityResult.error;
+        if (directoryBookingResult.error &&
+            !["42703", "PGRST204"].includes(directoryBookingResult.error.code)) throw directoryBookingResult.error;
+        if (serviceHoursResult.error) throw serviceHoursResult.error;
+        if (dateOverridesResult.error) throw dateOverridesResult.error;
+        if (studentProfilesResult.error) throw studentProfilesResult.error;
         if (staffProfilesResult.error) throw staffProfilesResult.error;
         if (staffRegistryResult.error) throw staffRegistryResult.error;
+        state.counselorDirectory = directoryResult.data;
+        state.directoryManagementReady = directoryResult.managementReady;
+        state.counselorAvailability = availabilityResult.data;
+        state.counselorDateOverrides = counselorDateOverridesResult.data;
+        state.counselorScheduleReady = counselorDateOverridesResult.scheduleReady;
+        state.directoryBookingReady = !directoryBookingResult.error;
         const staffEmails = new Map(staffRegistryResult.data.map(account => [account.user_id, account.account_email]));
         state.staffAccounts = staffProfilesResult.data.map(profile => ({
           ...profile,
@@ -167,6 +216,10 @@
           const student = record.student || {};
           const guestStudent = record.guestStudent || {};
           const counselorProfile = record.counselor || {};
+          const counselorDirectory = state.counselorDirectory.find(entry =>
+            entry.id === record.counselor_directory_id ||
+            (!record.counselor_directory_id && entry.linked_profile_id === record.counselor_id)
+          );
           const start = record.start_time || record.requested_start_time;
           const end = record.end_time || record.requested_end_time;
           return {
@@ -188,13 +241,15 @@
             siblings: student.sibling_count ?? "",
             category: record.category,
             mode: record.mode,
-            status: ({ pending: "Menunggu", confirmed: "Terkonfirmasi", completed: "Terlaksana", rejected: "Ditolak" })[record.status],
+            status: ({ pending: "Menunggu", confirmed: "Terkonfirmasi", completed: "Terlaksana", rejected: "Ditolak", cancelled: "Dibatalkan", no_response: "Tidak ada respons" })[record.status] || "Status diperbarui",
+            adminCloseReason: record.admin_close_reason || "",
             reason: record.reason,
             details: record.issue_details,
             issue: record.issue_summary,
             counselorId: record.counselor_id,
-            counselor: counselorProfile.full_name || "",
-            counselorPhone: counselorProfile.phone || "",
+            counselorDirectoryId: counselorDirectory?.id || record.counselor_directory_id || null,
+            counselor: counselorDirectory?.full_name || counselorProfile.full_name || "",
+            counselorPhone: counselorDirectory?.phone || counselorProfile.phone || "",
             location: record.location || "",
             scheduleChanged: record.schedule_changed,
             createdAt: (() => { const value = new Date(record.created_at); value.setHours(0, 0, 0, 0); return value; })(),
@@ -202,7 +257,7 @@
             reminderFeedback: ""
           };
         }));
-        counselors.splice(0, counselors.length, ...profilesResult.data.map(profile => ({
+        counselors.splice(0, counselors.length, ...counselorProfilesResult.data.map(profile => ({
           id: profile.id,
           name: profile.full_name,
           phone: profile.phone || "",
@@ -210,7 +265,7 @@
           mustChangePassword: profile.must_change_password
         })));
         state.weeklySettings = Array.from({ length: 7 }, (_, weekday) => {
-          const setting = settingsResult.data.find(item => item.weekday === weekday);
+          const setting = serviceHoursResult.data.find(item => item.weekday === weekday);
           return setting
             ? {
               onlineOpen: setting.online_is_open,
@@ -220,13 +275,13 @@
             }
             : { onlineOpen: false, onlineHours: Array(8).fill(false), offlineOpen: false, offlineHours: Array(8).fill(false) };
         });
-        state.dateOverrides = Object.fromEntries(overrideResult.data.map(item => [String(item.available_date).slice(0, 10), {
+        state.dateOverrides = Object.fromEntries(dateOverridesResult.data.map(item => [String(item.available_date).slice(0, 10), {
           onlineOpen: item.online_is_open,
           onlineHours: item.online_open_slots,
           offlineOpen: item.offline_is_open,
           offlineHours: item.offline_open_slots
         }]));
-        newScheduleStudents.splice(0, newScheduleStudents.length, ...studentsResult.data);
+        newScheduleStudents.splice(0, newScheduleStudents.length, ...studentProfilesResult.data);
         initializeSettingsDraft();
         const reportRows = await window.counselingBackend.loadReports(client, appointments);
         const reportsByNim = new Map();
@@ -504,7 +559,9 @@
         [
           { status: "Menunggu", label: "Menunggu konfirmasi", className: "waiting" },
           { status: "Terkonfirmasi", label: "Terkonfirmasi", className: "confirmed" },
-          { status: "Terlaksana", label: "Terlaksana", className: "completed" }
+          { status: "Terlaksana", label: "Terlaksana", className: "completed" },
+          { status: "Tidak ada respons", label: "Tidak ada respons", className: "waiting" },
+          { status: "Dibatalkan", label: "Dibatalkan", className: "waiting" }
         ].forEach(({ status, label, className }) => {
           const count = appointments.filter(appointment => appointment.status === status).length;
           if (!count) return;
@@ -523,23 +580,69 @@
           list.append(empty);
           return;
         }
-        appointments.forEach(appointment => {
-          const row = document.createElement("button");
-          row.className = "activity-row actionable";
-          row.type = "button";
-          const actionLabel = appointment.status === "Menunggu"
-            ? "Klik untuk konfirmasi jadwal"
-            : appointment.status === "Terkonfirmasi"
-              ? "Klik untuk melihat jadwal dan reminder"
-              : "Klik untuk melihat pengajuan";
-          row.setAttribute("aria-label", `${appointment.name}, ${appointment.time}, ${appointment.status}. ${actionLabel}.`);
-          row.title = actionLabel;
-          const badgeClass = appointment.status === "Terlaksana" ? "done" : appointment.status === "Terkonfirmasi" ? "confirmed" : "";
-          const statusLabel = appointment.status === "Menunggu" ? "Menunggu konfirmasi" : appointment.status;
-          row.innerHTML = `<span class="activity-time">${escapeHtml(appointment.time)}</span><span class="activity-student"><strong>${escapeHtml(appointment.name)}</strong><span>${escapeHtml(appointment.nim)} · ${escapeHtml(appointment.faculty)}</span></span><span class="activity-mode">${escapeHtml(appointment.mode)}</span><span class="status-badge ${badgeClass}">${escapeHtml(statusLabel)}</span>`;
-          row.addEventListener("click", () => openDayAppointment(appointment));
-          list.append(row);
+        const groups = new Map();
+        [...appointments].sort((left, right) => (left.counselor || "").localeCompare(right.counselor || "", "id") || left.time.localeCompare(right.time))
+          .forEach(appointment => {
+            const key = appointment.counselor || "Belum ditentukan";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(appointment);
+          });
+        groups.forEach((groupAppointments, counselorName) => {
+          const group = document.createElement("section");
+          group.className = "activity-group";
+          const heading = document.createElement("h3");
+          heading.textContent = `${counselorName} · ${groupAppointments.length} sesi`;
+          group.append(heading);
+          groupAppointments.forEach(appointment => {
+            const entry = document.createElement("div");
+            entry.className = "activity-entry";
+            const row = document.createElement("button");
+            row.className = "activity-row actionable";
+            row.type = "button";
+            const actionLabel = appointment.status === "Menunggu"
+              ? "Klik untuk konfirmasi jadwal"
+              : appointment.status === "Terkonfirmasi"
+                ? "Klik untuk melihat jadwal dan reminder"
+                : "Klik untuk melihat pengajuan";
+            row.setAttribute("aria-label", `${appointment.name}, ${appointment.time}, ${appointment.status}. ${actionLabel}.`);
+            row.title = actionLabel;
+            const badgeClass = appointment.status === "Terlaksana" ? "done" : appointment.status === "Terkonfirmasi" ? "confirmed" : "";
+            const statusLabel = appointment.status === "Menunggu" ? "Menunggu konfirmasi" : appointment.status;
+            row.innerHTML = `<span class="activity-time">${escapeHtml(appointment.time)}</span><span class="activity-student"><strong>${escapeHtml(appointment.name)}</strong><span>${escapeHtml(appointment.nim)} · ${escapeHtml(appointment.faculty)}</span>${appointment.adminCloseReason ? `<small>${escapeHtml(appointment.adminCloseReason)}</small>` : ""}</span><span class="activity-mode">${escapeHtml(appointment.mode)}</span><span class="status-badge ${badgeClass}">${escapeHtml(statusLabel)}</span>`;
+            row.addEventListener("click", () => openDayAppointment(appointment));
+            entry.append(row);
+            if (canCloseAppointment(appointment)) {
+              const closeButton = document.createElement("button");
+              closeButton.className = "close-session-button";
+              closeButton.type = "button";
+              closeButton.textContent = "Tutup sesi";
+              closeButton.setAttribute("aria-label", `Tutup sesi ${appointment.id}`);
+              closeButton.addEventListener("click", () => openCloseAppointment(appointment));
+              entry.append(closeButton);
+            }
+            group.append(entry);
+          });
+          list.append(group);
         });
+      }
+
+      function canCloseAppointment(appointment) {
+        return appointment.status === "Terkonfirmasi" && dateKey(appointment.date) <= dateKey(today);
+      }
+
+      function openCloseAppointment(appointment) {
+        if (!canCloseAppointment(appointment)) return;
+        state.closingAppointmentId = appointment.dbId;
+        $("#closeAppointmentForm").reset();
+        $("#closeAppointmentSummary").textContent = `${appointment.name} · ${appointment.id} · ${formatDate(appointment.date)} · ${appointment.time}`;
+        $("#closeAppointmentMessage").textContent = "";
+        $("#closeAppointmentBackdrop").hidden = false;
+        $("#closeAppointmentStatus").focus();
+      }
+
+      function closeAppointmentModal() {
+        $("#closeAppointmentBackdrop").hidden = true;
+        state.closingAppointmentId = null;
       }
 
       function openDayAppointment(appointment) {
@@ -627,7 +730,14 @@
       }
 
       function renderCounselorOptions() {
-        const activeCounselors = counselors.filter(counselor => counselor.active);
+        const scheduledDirectory = state.counselorDirectory.filter(entry => entry.is_listed &&
+          (state.counselorAvailability.some(setting =>
+              setting.directory_id === entry.id && setting.open_slots?.some(Boolean)
+            ) ||
+            state.counselorDateOverrides.some(setting =>
+              setting.directory_id === entry.id && setting.open_slots?.some(Boolean)
+            ))
+        );
         [["#assignedCounselor", "Pilih konselor"], ["#rescheduleCounselor", "Pilih konselor"]].forEach(([selector, placeholder]) => {
           const select = $(selector);
           const currentValue = select.value;
@@ -638,98 +748,338 @@
           option.selected = true;
           option.textContent = placeholder;
           select.append(option);
-          activeCounselors.forEach(counselor => {
+          scheduledDirectory.forEach(directory => {
             const counselorOption = document.createElement("option");
-            counselorOption.value = counselor.id || counselor.name;
-            counselorOption.textContent = counselor.name;
+            counselorOption.value = directory.id;
+            counselorOption.textContent = directory.full_name;
             select.append(counselorOption);
           });
-          if (activeCounselors.some(counselor => counselor.id === currentValue || counselor.name === currentValue)) select.value = currentValue;
+          if (scheduledDirectory.some(directory => directory.id === currentValue)) select.value = currentValue;
         });
       }
 
+      function counselorHasSchedule(counselorId) {
+        const directory = state.counselorDirectory.find(entry => entry.linked_profile_id === counselorId && entry.is_listed);
+        return Boolean(directory && state.counselorAvailability.some(entry =>
+          entry.directory_id === directory.id && entry.open_slots?.some(Boolean)
+        ));
+      }
+
       function renderCounselors() {
-        const list = $("#counselorsList");
+        const activeCount = counselors.filter(counselor => counselor.active && !counselor.mustChangePassword).length;
+        $("#counselorCount").textContent = `${state.counselorDirectory.length} profil · ${activeCount} akun aktif`;
+        renderCounselorOptions();
+        renderCounselorDirectory();
+      }
+
+      function directoryScheduleDayCount(directoryId) {
+        return new Set(state.counselorAvailability
+          .filter(setting => setting.directory_id === directoryId && setting.open_slots?.some(Boolean))
+          .map(setting => setting.weekday)).size;
+      }
+
+      const counselorScheduleDays = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+      const counselorScheduleSlots = Array.from({ length: 8 }, (_, index) => ({
+        label: `${String(index + 8).padStart(2, "0")}-${String(index + 9).padStart(2, "0")}`,
+        aria: `${String(index + 8).padStart(2, "0")}.00 sampai ${String(index + 9).padStart(2, "0")}.00`
+      }));
+
+      function renderCounselorScheduleEditor(entry, card) {
+        const editor = document.createElement("section");
+        editor.className = "directory-schedule-editor";
+        editor.hidden = true;
+        editor.innerHTML = `
+          <p class="schedule-editor-note">Jadwal mingguan berlaku berulang. Pengecualian tanggal mengubah ketersediaan konselor ini untuk satu tanggal dan jenis sesi saja. Sesi yang sudah dipesan tetap harus dijadwalkan ulang melalui kalender admin.</p>
+          <h4>Jadwal mingguan</h4>
+          <div class="counselor-weekly-grid"></div>
+          <button class="secondary-button save-weekly-schedule" type="button">Simpan jadwal mingguan</button>
+          <hr>
+          <h4>Pengecualian satu tanggal</h4>
+          <div class="date-exception-fields">
+            <label>Tanggal<input class="exception-date" type="date" required></label>
+            <label>Jenis sesi<select class="exception-mode"><option>Online</option><option>Tatap muka</option></select></label>
+          </div>
+          <p class="exception-current-note" role="status">Pilih tanggal dan jenis sesi. Tanpa pengecualian, jadwal mingguan berlaku.</p>
+          <div class="counselor-exception-slots"></div>
+          <div class="directory-admin-actions">
+            <button class="secondary-button clear-date-exception" type="button" disabled>Hapus pengecualian</button>
+            <button class="primary-button save-date-exception" type="button">Simpan pengecualian</button>
+          </div>`;
+        const weeklyGrid = editor.querySelector(".counselor-weekly-grid");
+        const slotInputs = counselorScheduleSlots.map((slot, slotIndex) =>
+          `<label title="${slot.aria}"><input type="checkbox" data-slot="${slotIndex}"><span>${slot.label}</span></label>`
+        ).join("");
+        for (let weekday = 0; weekday < 7; weekday += 1) {
+          for (const mode of ["Online", "Tatap muka"]) {
+            const row = document.createElement("div");
+            row.className = "counselor-weekly-row";
+            row.dataset.weekday = String(weekday);
+            row.dataset.mode = mode;
+            row.innerHTML = `<strong>${counselorScheduleDays[weekday]}</strong><span>${mode}</span><div>${slotInputs}</div>`;
+            const current = state.counselorAvailability.find(setting =>
+              setting.directory_id === entry.id && setting.weekday === weekday && setting.mode === mode
+            );
+            row.querySelectorAll("input").forEach((input, index) => {
+              input.checked = Boolean(current?.open_slots?.[index]);
+              input.setAttribute("aria-label", `${counselorScheduleDays[weekday]} ${mode} ${counselorScheduleSlots[index].aria}`);
+            });
+            weeklyGrid.append(row);
+          }
+        }
+        const exceptionSlots = editor.querySelector(".counselor-exception-slots");
+        exceptionSlots.innerHTML = counselorScheduleSlots.map((slot, slotIndex) =>
+          `<label title="${slot.aria}"><input type="checkbox" data-slot="${slotIndex}"><span>${slot.label}</span></label>`
+        ).join("");
+        const dateInput = editor.querySelector(".exception-date");
+        const todayKey = dateKey(today);
+        const maxDate = new Date(today);
+        maxDate.setDate(maxDate.getDate() + 365);
+        dateInput.min = todayKey;
+        dateInput.max = dateKey(maxDate);
+        dateInput.value = todayKey;
+        const modeSelect = editor.querySelector(".exception-mode");
+        const note = editor.querySelector(".exception-current-note");
+        const clearButton = editor.querySelector(".clear-date-exception");
+        const updateExceptionFields = () => {
+          const override = state.counselorDateOverrides.find(item =>
+            item.directory_id === entry.id &&
+            item.available_date === dateInput.value &&
+            item.mode === modeSelect.value
+          );
+          exceptionSlots.querySelectorAll("input").forEach((input, index) => {
+            input.checked = Boolean(override?.open_slots?.[index]);
+          });
+          note.textContent = override
+            ? "Pengecualian tersimpan. Centang slot yang masih dapat dilayani; kosongkan semua untuk menutup seluruh sesi pada tanggal ini."
+            : "Belum ada pengecualian; jadwal mingguan berlaku. Kosongkan semua slot lalu simpan untuk menutup tanggal ini.";
+          clearButton.disabled = !override;
+        };
+        dateInput.addEventListener("change", updateExceptionFields);
+        modeSelect.addEventListener("change", updateExceptionFields);
+        updateExceptionFields();
+
+        editor.querySelector(".save-weekly-schedule").addEventListener("click", async event => {
+          const button = event.currentTarget;
+          const settings = [...weeklyGrid.querySelectorAll(".counselor-weekly-row")].map(row => ({
+            weekday: Number(row.dataset.weekday),
+            mode: row.dataset.mode,
+            open_slots: [...row.querySelectorAll("input")].map(input => input.checked)
+          }));
+          button.disabled = true;
+          try {
+            const { error } = await adminContext.client.rpc("admin_save_counselor_availability", {
+              p_directory_id: entry.id,
+              p_settings: settings
+            });
+            if (error) throw error;
+            await loadAdminData(adminContext);
+            renderCounselors();
+            showToast(`Jadwal mingguan ${entry.full_name} berhasil disimpan.`);
+          } catch (error) {
+            showToast(`Jadwal mingguan gagal disimpan: ${error.message}`);
+          } finally {
+            button.disabled = false;
+          }
+        });
+        editor.querySelector(".save-date-exception").addEventListener("click", async event => {
+          const button = event.currentTarget;
+          if (!dateInput.value || !dateInput.reportValidity()) return;
+          button.disabled = true;
+          try {
+            const slots = [...exceptionSlots.querySelectorAll("input")].map(input => input.checked);
+            const { error } = await adminContext.client.rpc("admin_save_counselor_date_override", {
+              p_directory_id: entry.id,
+              p_available_date: dateInput.value,
+              p_mode: modeSelect.value,
+              p_open_slots: slots,
+              p_clear: false
+            });
+            if (error) throw error;
+            await loadAdminData(adminContext);
+            renderCounselors();
+            showToast("Pengecualian jadwal konselor berhasil disimpan.");
+          } catch (error) {
+            showToast(`Pengecualian jadwal gagal disimpan: ${error.message}`);
+          } finally {
+            button.disabled = false;
+          }
+        });
+        clearButton.addEventListener("click", async () => {
+          clearButton.disabled = true;
+          try {
+            const { error } = await adminContext.client.rpc("admin_save_counselor_date_override", {
+              p_directory_id: entry.id,
+              p_available_date: dateInput.value,
+              p_mode: modeSelect.value,
+              p_open_slots: null,
+              p_clear: true
+            });
+            if (error) throw error;
+            await loadAdminData(adminContext);
+            renderCounselors();
+            showToast("Pengecualian dihapus; jadwal mingguan kembali berlaku.");
+          } catch (error) {
+            showToast(`Pengecualian gagal dihapus: ${error.message}`);
+            clearButton.disabled = false;
+          }
+        });
+        card.insertBefore(editor, card.querySelector(".directory-admin-actions"));
+        const scheduleButton = card.querySelector(".directory-open-schedule");
+        scheduleButton.addEventListener("click", () => {
+          editor.hidden = !editor.hidden;
+          scheduleButton.textContent = editor.hidden ? "Atur jadwal" : "Tutup pengaturan";
+        });
+      }
+
+      function directorySaveValues(card) {
+        return {
+          p_directory_id: card.dataset.directoryId || null,
+          p_full_name: card.querySelector(".directory-name").value.trim().replace(/\s+/g, " "),
+          p_specialties: card.querySelector(".directory-specialties").value.split(",").map(value => value.trim()).filter(Boolean),
+          p_phone: card.querySelector(".directory-phone").value.trim(),
+          p_contact_email: card.querySelector(".directory-email").value.trim()
+        };
+      }
+
+      async function saveDirectoryCard(card, message) {
+        const values = directorySaveValues(card);
+        if (values.p_full_name.length < 2 || !values.p_specialties.length || !values.p_contact_email) {
+          showToast("Lengkapi nama, spesialisasi, dan email.");
+          return false;
+        }
+        const { error } = await adminContext.client.rpc("admin_save_counselor_directory", values);
+        if (error) throw error;
+        await loadAdminData(adminContext);
+        renderCounselors();
+        showToast(message);
+        return true;
+      }
+
+      function renderCounselorDirectory() {
+        const list = $("#counselorDirectoryList");
         list.replaceChildren();
-        const activeCount = counselors.filter(counselor => counselor.active).length;
-        $("#counselorCount").textContent = `${activeCount} aktif · ${counselors.length - activeCount} tidak aktif`;
-        counselors.forEach(counselor => {
-          const row = document.createElement("div");
-          row.className = "counselor-row";
-          const identity = document.createElement("div");
-          identity.className = "counselor-identity";
-          const name = document.createElement("strong");
-          name.textContent = counselor.name;
-          const phone = document.createElement("span");
-          phone.textContent = `WhatsApp · +${counselor.phone}`;
-          identity.append(name, phone);
-          const status = document.createElement("span");
-          status.className = `counselor-status${counselor.active ? "" : " inactive"}`;
-          status.textContent = counselor.mustChangePassword ? "Belum aktivasi awal" : counselor.active ? "Aktif" : "Tidak aktif";
-          if (counselor.mustChangePassword) status.classList.add("inactive");
-          const toggle = document.createElement("button");
-          toggle.className = "counselor-toggle";
-          toggle.type = "button";
-          toggle.setAttribute("role", "switch");
-          toggle.setAttribute("aria-checked", String(counselor.active));
-          toggle.setAttribute("aria-label", `${counselor.active ? "Nonaktifkan" : "Aktifkan"} konselor ${counselor.name}`);
-          toggle.disabled = counselor.mustChangePassword;
-          toggle.innerHTML = '<span class="counselor-toggle-track" aria-hidden="true"></span><span></span>';
-          toggle.lastElementChild.textContent = counselor.active ? "Aktif" : "Nonaktif";
-          toggle.addEventListener("click", async () => {
-            const nextActive = !counselor.active;
-            const { error } = await adminContext.client.from("profiles").update({ is_active: nextActive }).eq("id", counselor.id);
+        const notice = $("#directoryMigrationNotice");
+        if (notice) notice.hidden = state.directoryManagementReady;
+        const scheduleNotice = $("#scheduleMigrationNotice");
+        if (scheduleNotice) scheduleNotice.hidden = state.counselorScheduleReady;
+        const bookingNotice = $("#directoryBookingMigrationNotice");
+        if (bookingNotice) bookingNotice.hidden = state.directoryBookingReady;
+        $("#addCounselorForm").querySelector('[type="submit"]').disabled = !state.directoryManagementReady;
+        state.counselorDirectory.forEach(entry => {
+          const linked = Boolean(entry.linked_profile_id);
+          const linkedProfile = linked ? counselors.find(counselor => counselor.id === entry.linked_profile_id) : null;
+          const email = entry.contact_email || `${entry.source_key}@example.invalid`;
+          const phoneValue = entry.phone || linkedProfile?.phone || "";
+          const days = directoryScheduleDayCount(entry.id);
+          const canCreateAccount = !linked && Boolean(phoneValue) && !email.endsWith("@example.invalid");
+          const card = document.createElement("article");
+          card.className = "directory-admin-card";
+          card.innerHTML = `
+            <div class="directory-card-heading">
+              <div><h3>${escapeHtml(entry.full_name)}</h3><p>${escapeHtml((entry.specialties || []).join(" · ") || "Spesialisasi belum diisi")}</p></div>
+              <span class="directory-admin-status${linkedProfile?.active && !linkedProfile.mustChangePassword ? " linked" : ""}">${linked ? (linkedProfile?.active && !linkedProfile.mustChangePassword ? "Akun aktif" : "Akun tertaut") : "Profil publik"}</span>
+            </div>
+            <div class="directory-meta">
+              <span>${escapeHtml(phoneValue ? `WhatsApp · ${phoneValue}` : "WhatsApp belum diisi")}</span>
+              <span>${days ? `${days} hari praktik tersimpan` : "Jadwal praktik belum diatur"}</span>
+            </div>
+            <div class="directory-admin-fields">
+              <label>Nama konselor<input class="directory-name" maxlength="120" value="${escapeHtml(entry.full_name)}" readonly></label>
+              <label>Spesialisasi<input class="directory-specialties" value="${escapeHtml((entry.specialties || []).join(", "))}" readonly></label>
+              <label>Nomor WhatsApp<input class="directory-phone" type="tel" inputmode="tel" value="${escapeHtml(phoneValue)}" placeholder="08xxxxxxxxxx" readonly></label>
+              <label>Email direktori<input class="directory-email" type="email" value="${escapeHtml(email)}" readonly></label>
+            </div>
+            <p class="directory-account-note">${linked ? "Email login akun tertaut dikelola terpisah dari email direktori." : "Email example.invalid adalah placeholder; belum dapat digunakan untuk login."}</p>
+            <div class="directory-admin-actions">
+              <button class="secondary-button directory-edit-profile" type="button"${state.directoryManagementReady ? "" : " disabled"}>Edit profil</button>
+              <button class="secondary-button directory-edit-email" type="button"${state.directoryManagementReady ? "" : " disabled"}>Edit email</button>
+              <button class="secondary-button directory-open-schedule" type="button"${state.counselorScheduleReady ? "" : " disabled"}>Atur jadwal</button>
+              ${linked ? `<button class="counselor-toggle" type="button" role="switch" aria-checked="${String(Boolean(linkedProfile?.active))}"${linkedProfile?.mustChangePassword ? " disabled" : ""}><span class="counselor-toggle-track" aria-hidden="true"></span><span>${linkedProfile?.active ? "Aktif" : "Nonaktif"}</span></button>` : `<button class="primary-button directory-create" type="button"${canCreateAccount ? "" : " hidden"}>Buat akun & tautkan</button>`}
+            </div>`;
+          card.dataset.directoryId = entry.id;
+          if (state.counselorScheduleReady) renderCounselorScheduleEditor(entry, card);
+          const profileInputs = [".directory-name", ".directory-specialties", ".directory-phone"]
+            .map(selector => card.querySelector(selector));
+          const emailInput = card.querySelector(".directory-email");
+          const profileButton = card.querySelector(".directory-edit-profile");
+          profileButton.addEventListener("click", async () => {
+            if (profileButton.dataset.editing !== "true") {
+              profileInputs.forEach(input => { input.readOnly = false; });
+              profileButton.dataset.editing = "true";
+              profileButton.textContent = "Simpan profil";
+              profileInputs[0].focus();
+              return;
+            }
+            profileButton.disabled = true;
+            try {
+              if (await saveDirectoryCard(card, "Profil konselor berhasil diperbarui.")) return;
+            } catch (error) {
+              showToast(`Profil konselor gagal diperbarui: ${error.message}`);
+            } finally {
+              profileButton.disabled = false;
+            }
+          });
+          card.querySelector(".directory-edit-email").addEventListener("click", async event => {
+            const button = event.currentTarget;
+            if (button.dataset.editing !== "true") {
+              emailInput.readOnly = false;
+              button.dataset.editing = "true";
+              button.textContent = "Simpan email";
+              emailInput.focus();
+              return;
+            }
+            button.disabled = true;
+            try {
+              if (await saveDirectoryCard(card, "Email direktori berhasil diperbarui.")) return;
+            } catch (error) {
+              showToast(`Email direktori gagal diperbarui: ${error.message}`);
+            } finally {
+              button.disabled = false;
+            }
+          });
+          const createButton = card.querySelector(".directory-create");
+          createButton?.addEventListener("click", async () => {
+            const values = directorySaveValues(card);
+            if (values.p_contact_email.endsWith("@example.invalid")) {
+              showToast("Ganti email placeholder dengan email asli sebelum membuat akun.");
+              return;
+            }
+            createButton.disabled = true;
+            try {
+              await saveDirectoryCard(card, "Profil tersimpan.");
+              const { data, error } = await adminContext.client.functions.invoke("create-counselor", {
+                body: { directory_id: entry.id, full_name: values.p_full_name, phone: values.p_phone, email: values.p_contact_email }
+              });
+              if (error) throw error;
+              showTemporaryPassword(data, "konselor");
+              await loadAdminData(adminContext);
+              renderCounselors();
+            } catch (error) {
+              showToast(`Akun konselor gagal dibuat: ${error.message}`);
+            } finally {
+              createButton.disabled = false;
+            }
+          });
+          const toggle = card.querySelector(".counselor-toggle");
+          toggle?.addEventListener("click", async () => {
+            const nextActive = toggle.getAttribute("aria-checked") !== "true";
+            const { error } = await adminContext.client.from("profiles")
+              .update({ is_active: nextActive }).eq("id", entry.linked_profile_id);
             if (error) {
               showToast(`Status konselor gagal diperbarui: ${error.message}`);
               return;
             }
-            counselor.active = nextActive;
+            await loadAdminData(adminContext);
             renderCounselors();
           });
-          row.append(identity, status, toggle);
-          list.append(row);
+          list.append(card);
         });
-        renderCounselorOptions();
-      }
-
-      async function addCounselor(name, rawPhone, email) {
-        const normalizedName = name.trim().replace(/\s+/g, " ");
-        const digits = rawPhone.replace(/\D/g, "");
-        const normalizedPhone = digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
-        if (counselors.some(counselor => counselor.name.toLocaleLowerCase("id-ID") === normalizedName.toLocaleLowerCase("id-ID"))) {
-          $("#counselorFormMessage").textContent = "Nama konselor sudah terdaftar.";
-          return;
+        if (!state.counselorDirectory.length) {
+          const empty = document.createElement("p");
+          empty.className = "directory-empty";
+          empty.textContent = "Belum ada profil konselor. Tambahkan profil untuk menampilkannya di direktori mahasiswa.";
+          list.append(empty);
         }
-        if (counselors.some(counselor => counselor.phone === normalizedPhone)) {
-          $("#counselorFormMessage").textContent = "Nomor WhatsApp sudah digunakan oleh konselor lain.";
-          return;
-        }
-        $("#counselorFormMessage").textContent = "";
-        try {
-          const { data, error } = await adminContext.client.functions.invoke("create-counselor", {
-            body: { full_name: normalizedName, phone: normalizedPhone, email: email.trim() }
-          });
-          if (error) throw error;
-          counselors.push({ id: data.id, name: normalizedName, phone: normalizedPhone, active: false, mustChangePassword: true });
-          $("#addCounselorForm").reset();
-          $("#addCounselorForm").hidden = true;
-          renderCounselors();
-          showTemporaryPassword(data, "konselor");
-          try {
-            await refreshStaffAccounts();
-          } catch (error) {
-            $("#counselorFormMessage").textContent = `Akun sudah dibuat, tetapi daftar belum diperbarui: ${error.message}`;
-          }
-        } catch (error) {
-          $("#counselorFormMessage").textContent = `Akun gagal dibuat: ${error.message}. Pastikan fungsi create-counselor telah di-deploy.`;
-          return;
-        }
-      }
-
-      function updateStaffAccountFields() {
-        const isCounselor = $("#staffAccountRole").value === "counselor";
-        $("#staffAccountPhoneField").hidden = !isCounselor;
-        $("#staffAccountPhone").required = isCounselor;
       }
 
       async function createStaffAccount(account) {
@@ -741,7 +1091,6 @@
           });
           if (error) throw error;
           $("#staffAccountForm").reset();
-          updateStaffAccountFields();
           message.textContent = `Akun ${account.role === "admin" ? "admin" : "konselor"} berhasil dibuat untuk ${data.email}. Pengguna dapat login untuk mengganti kata sandi awal.`;
           showTemporaryPassword(data, account.role);
           if (account.role === "counselor") {
@@ -802,14 +1151,15 @@
         const list = $("#staffAccounts");
         if (!list) return;
         list.replaceChildren();
-        if (!state.staffAccounts.length) {
+        const admins = state.staffAccounts.filter(account => account.role === "admin");
+        if (!admins.length) {
           const empty = document.createElement("p");
           empty.className = "counselor-form-message";
-          empty.textContent = "Belum ada akun admin atau konselor.";
+          empty.textContent = "Belum ada akun admin.";
           list.append(empty);
           return;
         }
-        state.staffAccounts.forEach(account => {
+        admins.forEach(account => {
           const row = document.createElement("div");
           row.className = "staff-account-row";
           const identity = document.createElement("div");
@@ -1106,6 +1456,18 @@
         );
       }
 
+      function directoryConflict(date, time, directoryId, excludeId) {
+        const directory = state.counselorDirectory.find(entry => entry.id === directoryId);
+        return sampleAppointments.find(appointment =>
+          appointment.id !== excludeId &&
+          ["Menunggu", "Terkonfirmasi"].includes(appointment.status) &&
+          (appointment.counselorDirectoryId === directoryId ||
+            (directory?.linked_profile_id && appointment.counselorId === directory.linked_profile_id)) &&
+          isSameDate(appointment.date, date) &&
+          appointment.time === time
+        );
+      }
+
       function renderCounselingReportDetail(entry) {
         const detail = $("#reportDetail");
         if (!entry) {
@@ -1195,9 +1557,9 @@
         $("#approvalDate").min = dateKey(today);
         $("#approvalDate").value = dateKey(application.date);
         $("#approvalMessage").textContent = "";
+        $("#assignedCounselor").value = application.counselorDirectoryId || "";
         renderApprovalTimes(application);
         $("#approvalSummary").textContent = `${application.name} · ${application.id} · Jadwal pilihan mahasiswa: ${formatDate(application.date)} · ${application.time} · ${application.mode}`;
-        $("#assignedCounselor").value = "";
         const location = $("#sessionLocation");
         const label = $("#locationField label");
         if (application.mode === "Online") {
@@ -1215,14 +1577,43 @@
         $("#approvalDate").focus();
       }
 
-      function counselorConflict(date, time, counselorName, excludeId) {
+      function counselorConflict(date, time, counselorId, excludeId) {
         return sampleAppointments.find(appointment =>
           appointment.id !== excludeId &&
-          appointment.status === "Terkonfirmasi" &&
-          appointment.counselor === counselorName &&
+          ["Menunggu", "Terkonfirmasi"].includes(appointment.status) &&
+          appointment.counselorId === counselorId &&
           isSameDate(appointment.date, date) &&
           appointment.time === time
         );
+      }
+
+      function isCounselorAvailable(directoryId, date, mode, time) {
+        const directory = state.counselorDirectory.find(entry =>
+          (entry.id === directoryId || entry.linked_profile_id === directoryId) && entry.is_listed
+        );
+        if (!directory) return false;
+        directoryId = directory.id;
+        const override = state.counselorDateOverrides.find(entry =>
+          entry.directory_id === directoryId &&
+          entry.available_date === dateKey(date) &&
+          entry.mode === mode
+        );
+        const row = state.counselorAvailability.find(entry =>
+          entry.directory_id === directoryId &&
+          Number(entry.weekday) === date.getDay() &&
+          entry.mode === mode
+        );
+        const startHour = Number(String(time).split("–")[0].split(".")[0]);
+        const slotIndex = startHour - 8;
+        return Boolean(slotIndex >= 0 && slotIndex < 8 &&
+          (override ? override.open_slots[slotIndex] : row?.open_slots[slotIndex]));
+      }
+
+      function isFutureServiceSlot(date, time) {
+        const [hour, minute] = String(time).split("–")[0].split(".").map(Number);
+        const start = new Date(date);
+        start.setHours(hour, minute, 0, 0);
+        return start > new Date();
       }
 
       function cloneSettings(settings) {
@@ -1259,16 +1650,24 @@
         return { openKey: `${prefix}Open`, hoursKey: `${prefix}Hours` };
       }
 
-      function openedServiceHours(date, mode, excludeId = null) {
+      function openedServiceHours(date, mode, excludeId = null, directoryId = null) {
         const settings = settingsForDate(date);
+        if (directoryId) {
+          directoryId = state.counselorDirectory.find(entry =>
+            entry.id === directoryId || entry.linked_profile_id === directoryId
+          )?.id || directoryId;
+        }
         const { openKey, hoursKey } = modeSettings(settings, mode);
         if (!settings[openKey]) return [];
         return hours.filter((time, index) => {
           if (!settings[hoursKey][index]) return false;
-          const occupied = sampleAppointments.some(appointment =>
+          if (directoryId && !isCounselorAvailable(directoryId, date, mode, time)) return false;
+          const directory = directoryId && state.counselorDirectory.find(entry => entry.id === directoryId);
+          const occupied = directoryId && sampleAppointments.some(appointment =>
             appointment.id !== excludeId &&
-            (appointment.status === "Menunggu" || appointment.status === "Terkonfirmasi") &&
-            appointment.mode === mode &&
+            ["Menunggu", "Terkonfirmasi"].includes(appointment.status) &&
+            (appointment.counselorDirectoryId === directoryId ||
+              (directory?.linked_profile_id && appointment.counselorId === directory.linked_profile_id)) &&
             isSameDate(appointment.date, date) &&
             appointment.time === time
           );
@@ -1290,7 +1689,8 @@
         if (!dateValue) return;
         const [year, month, day] = dateValue.split("-").map(Number);
         const date = new Date(year, month - 1, day);
-        const availableTimes = openedServiceHours(date, application.mode, application.id);
+        const directoryId = $("#assignedCounselor").value || null;
+        const availableTimes = openedServiceHours(date, application.mode, application.id, directoryId);
         availableTimes.forEach(time => {
           const option = document.createElement("option");
           option.value = time;
@@ -1321,7 +1721,7 @@
         $("#rescheduleSummary").textContent = `${application.name} · ${application.id} · Saat ini: ${formatDate(application.date)} · ${application.time} · ${application.counselor}`;
         $("#rescheduleDate").min = dateKey(today);
         $("#rescheduleDate").value = dateKey(application.date);
-        $("#rescheduleCounselor").value = application.counselorId || application.counselor;
+        $("#rescheduleCounselor").value = application.counselorDirectoryId || "";
         $("#rescheduleMessage").textContent = "";
         const location = $("#rescheduleLocation");
         const label = $("#rescheduleLocationField label");
@@ -1355,7 +1755,8 @@
         const parts = dateValue.split("-").map(Number);
         const date = new Date(parts[0], parts[1] - 1, parts[2]);
         const dailySettings = settingsForDate(date);
-        const availableTimes = openedServiceHours(date, application.mode, application.id);
+        const directoryId = $("#rescheduleCounselor").value || null;
+        const availableTimes = openedServiceHours(date, application.mode, application.id, directoryId);
         availableTimes.forEach(time => {
           const option = document.createElement("option");
           option.value = time;
@@ -1397,7 +1798,8 @@
         select.append(placeholder);
         if (!dateValue) return;
         const date = parseDate(dateValue);
-        const available = openedServiceHours(date, mode);
+        const counselorId = $("#manualCounselor").value || null;
+        const available = openedServiceHours(date, mode, null, counselorId);
         available.forEach(time => {
           const option = document.createElement("option");
           option.value = time;
@@ -1420,7 +1822,7 @@
           student.id
         )));
         counselorSelect.replaceChildren(new Option("Pilih konselor aktif", ""));
-        counselors.filter(counselor => counselor.active).forEach(counselor => {
+        counselors.filter(counselor => counselor.active && counselorHasSchedule(counselor.id)).forEach(counselor => {
           counselorSelect.add(new Option(counselor.name, counselor.id));
         });
         $("#manualDate").min = dateKey(today);
@@ -1478,11 +1880,11 @@
         const date = parseDate($("#manualDate").value);
         const mode = $("#manualMode").value;
         const time = $("#manualTime").value;
-        if (date < today || !openedServiceHours(date, mode).includes(time)) {
+        if (date < today || !isFutureServiceSlot(date, time) || !openedServiceHours(date, mode, null, counselor.id).includes(time)) {
           $("#manualSessionMessage").textContent = `Slot ${mode} pada tanggal dan jam tersebut tidak tersedia.`;
           return;
         }
-        if (counselorConflict(date, time, counselor.name, null)) {
+        if (counselorConflict(date, time, counselor.id, null)) {
           $("#manualSessionMessage").textContent = "Konselor sudah memiliki sesi pada tanggal dan jam itu.";
           return;
         }
@@ -1615,9 +2017,11 @@
           overview: ["overviewView", "Dashboard eksekutif"],
           schedule: ["scheduleView", "Jadwal & jam layanan"],
           applications: ["applicationsView", "Pengajuan masuk"],
-          counselors: ["counselorsView", "Bagian konselor"],
+          counselors: ["counselorsView", "Manajemen konselor"],
+          admins: ["adminsView", "Admin & akun"],
           reports: ["reportsView", "Laporan Konseling"]
         };
+        if (view === "admins" && adminContext?.profile.role !== "superadmin") return;
         state.view = view;
         Object.entries(viewDetails).forEach(([key, [id]]) => { $(`#${id}`).hidden = key !== view; });
         $("#breadcrumbCurrent").textContent = viewDetails[view][1];
@@ -1744,6 +2148,14 @@
         $("#addCounselorForm").hidden = false;
         $("#newCounselorName").focus();
       });
+      $("#newCounselorName").addEventListener("input", event => {
+        const emailInput = $("#newCounselorEmail");
+        if (emailInput.value && !emailInput.value.endsWith("@example.invalid")) return;
+        const slug = event.currentTarget.value.trim().normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "").toLowerCase()
+          .replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "");
+        emailInput.value = slug ? `${slug}@example.invalid` : "";
+      });
       $("#cancelAddCounselor").addEventListener("click", () => {
         $("#addCounselorForm").reset();
         $("#addCounselorForm").hidden = true;
@@ -1753,13 +2165,41 @@
         event.preventDefault();
         const form = event.currentTarget;
         if (!form.reportValidity()) return;
-        if (hasUnsharedTemporaryPassword()) {
-          showToast("Salin dan tutup kata sandi sementara sebelumnya sebelum membuat akun lain.");
+        if (!state.directoryManagementReady) {
+          $("#counselorFormMessage").textContent = "Jalankan migrasi manajemen direktori konselor terlebih dahulu.";
           return;
         }
-        await addCounselor($("#newCounselorName").value, $("#newCounselorPhone").value, $("#newCounselorEmail").value);
+        const submitButton = form.querySelector('[type="submit"]');
+        const fullName = $("#newCounselorName").value.trim().replace(/\s+/g, " ");
+        const specialties = $("#newCounselorSpecialties").value.split(",").map(value => value.trim()).filter(Boolean);
+        const phone = $("#newCounselorPhone").value.replace(/\D/g, "");
+        const email = $("#newCounselorEmail").value.trim().toLowerCase();
+        if (state.counselorDirectory.some(entry => entry.full_name.toLocaleLowerCase("id-ID") === fullName.toLocaleLowerCase("id-ID"))) {
+          $("#counselorFormMessage").textContent = "Nama konselor sudah terdaftar.";
+          return;
+        }
+        submitButton.disabled = true;
+        $("#counselorFormMessage").textContent = "";
+        try {
+          const { error } = await adminContext.client.rpc("admin_save_counselor_directory", {
+            p_directory_id: null,
+            p_full_name: fullName,
+            p_specialties: specialties,
+            p_phone: phone,
+            p_contact_email: email
+          });
+          if (error) throw error;
+          form.reset();
+          form.hidden = true;
+          await loadAdminData(adminContext);
+          renderCounselors();
+          showToast(`${fullName} ditambahkan ke direktori mahasiswa.`);
+        } catch (error) {
+          $("#counselorFormMessage").textContent = `Profil gagal disimpan: ${error.message}`;
+        } finally {
+          submitButton.disabled = false;
+        }
       });
-      $("#staffAccountRole").addEventListener("change", updateStaffAccountFields);
       $("#copyTemporaryPassword").addEventListener("click", async () => {
         try {
           await navigator.clipboard.writeText($("#temporaryPasswordValue").textContent);
@@ -1785,8 +2225,7 @@
         await createStaffAccount({
           full_name: $("#staffAccountName").value.trim().replace(/\s+/g, " "),
           email: $("#staffAccountEmail").value.trim(),
-          role: $("#staffAccountRole").value,
-          phone: $("#staffAccountPhone").value.trim()
+          role: "admin"
         });
       });
       $("#approvalForm").addEventListener("submit", async event => {
@@ -1799,31 +2238,34 @@
           showToast("Pengajuan ini sudah tidak menunggu konfirmasi.");
           return;
         }
-        const assignedCounselor = counselors.find(item => item.id === $("#assignedCounselor").value || item.name === $("#assignedCounselor").value);
+        const assignedCounselor = state.counselorDirectory.find(item => item.id === $("#assignedCounselor").value);
         if (!assignedCounselor) {
-          $("#approvalMessage").textContent = "Pilih konselor yang aktif.";
+          $("#approvalMessage").textContent = "Pilih konselor dari direktori.";
           return;
         }
         const [year, month, day] = $("#approvalDate").value.split("-").map(Number);
         const appointmentDate = new Date(year, month - 1, day);
         const appointmentTime = $("#approvalTime").value;
-        if (appointmentDate < today) {
-          $("#approvalMessage").textContent = "Tanggal konseling tidak boleh berada di masa lalu.";
+        if (appointmentDate < today || !isFutureServiceSlot(appointmentDate, appointmentTime)) {
+          $("#approvalMessage").textContent = "Tanggal dan jam konseling harus berada di masa depan.";
           return;
         }
-        if (!openedServiceHours(appointmentDate, application.mode, application.id).includes(appointmentTime)) {
+        if (!openedServiceHours(appointmentDate, application.mode, application.id, assignedCounselor.id).includes(appointmentTime)) {
           $("#approvalMessage").textContent = `Jam ${appointmentTime} tidak dibuka pada hari ${dayNames[appointmentDate.getDay()]}. Pilih jam layanan yang tersedia.`;
           return;
         }
-        if (counselorConflict(appointmentDate, appointmentTime, assignedCounselor.name, application.id)) {
+        if (directoryConflict(appointmentDate, appointmentTime, assignedCounselor.id, application.id)) {
           $("#approvalMessage").textContent = "Konselor sudah memiliki sesi pada tanggal dan jam tersebut. Pilih jadwal atau konselor lain.";
           return;
         }
-        const scheduleChanged = !isSameDate(application.date, appointmentDate) || application.time !== appointmentTime;
+        const scheduleChanged = !isSameDate(application.date, appointmentDate) ||
+          application.time !== appointmentTime ||
+          application.counselorDirectoryId !== assignedCounselor.id;
         const times = window.counselingBackend.normalizeTime(appointmentTime);
         const { error } = await adminContext.client.from("appointments").update({
           status: "confirmed",
-          counselor_id: assignedCounselor.id,
+          counselor_id: assignedCounselor.linked_profile_id || null,
+          counselor_directory_id: assignedCounselor.id,
           scheduled_date: dateKey(appointmentDate),
           ...times,
           location: $("#sessionLocation").value.trim(),
@@ -1838,8 +2280,9 @@
         application.date = appointmentDate;
         application.time = appointmentTime;
         application.status = "Terkonfirmasi";
-        application.counselor = assignedCounselor.name;
-        application.counselorId = assignedCounselor.id;
+        application.counselor = assignedCounselor.full_name;
+        application.counselorId = assignedCounselor.linked_profile_id || null;
+        application.counselorDirectoryId = assignedCounselor.id;
         application.counselorPhone = assignedCounselor.phone || "";
         application.location = $("#sessionLocation").value.trim();
         application.scheduleChanged = scheduleChanged;
@@ -1862,7 +2305,15 @@
         const application = sampleAppointments.find(item => item.id === state.approvingApplicationId);
         if (application) renderApprovalTimes(application);
       });
+      $("#assignedCounselor").addEventListener("change", () => {
+        const application = sampleAppointments.find(item => item.id === state.approvingApplicationId);
+        if (application) renderApprovalTimes(application);
+      });
       $("#rescheduleDate").addEventListener("change", () => {
+        const application = sampleAppointments.find(item => item.id === state.editingApplicationId);
+        if (application) renderRescheduleTimes(application);
+      });
+      $("#rescheduleCounselor").addEventListener("change", () => {
         const application = sampleAppointments.find(item => item.id === state.editingApplicationId);
         if (application) renderRescheduleTimes(application);
       });
@@ -1879,27 +2330,28 @@
         const [year, month, day] = $("#rescheduleDate").value.split("-").map(Number);
         const newDate = new Date(year, month - 1, day);
         const newTime = $("#rescheduleTime").value;
-        const newCounselor = counselors.find(item => item.id === $("#rescheduleCounselor").value || item.name === $("#rescheduleCounselor").value);
+        const newCounselor = state.counselorDirectory.find(item => item.id === $("#rescheduleCounselor").value);
         if (!newCounselor) {
-          $("#rescheduleMessage").textContent = "Pilih konselor yang aktif.";
+          $("#rescheduleMessage").textContent = "Pilih konselor dari direktori.";
           return;
         }
-        if (newDate < today) {
-          $("#rescheduleMessage").textContent = "Tanggal baru tidak boleh berada di masa lalu.";
+        if (newDate < today || !isFutureServiceSlot(newDate, newTime)) {
+          $("#rescheduleMessage").textContent = "Tanggal dan jam baru harus berada di masa depan.";
           return;
         }
-        if (!openedServiceHours(newDate, application.mode, application.id).includes(newTime)) {
+        if (!openedServiceHours(newDate, application.mode, application.id, newCounselor.id).includes(newTime)) {
           $("#rescheduleMessage").textContent = `Jam ${newTime} tidak dibuka pada hari ${dayNames[newDate.getDay()]}.`;
           return;
         }
-        const conflict = counselorConflict(newDate, newTime, newCounselor.name, application.id);
+        const conflict = directoryConflict(newDate, newTime, newCounselor.id, application.id);
         if (conflict) {
-          $("#rescheduleMessage").textContent = `${newCounselor.name} sudah memiliki sesi ${conflict.id} pada tanggal dan jam tersebut. Pilih waktu atau konselor lain.`;
+          $("#rescheduleMessage").textContent = `${newCounselor.full_name} sudah memiliki sesi ${conflict.id} pada tanggal dan jam tersebut. Pilih waktu atau konselor lain.`;
           return;
         }
         const times = window.counselingBackend.normalizeTime(newTime);
         const { error } = await adminContext.client.from("appointments").update({
-          counselor_id: newCounselor.id,
+          counselor_id: newCounselor.linked_profile_id || null,
+          counselor_directory_id: newCounselor.id,
           scheduled_date: dateKey(newDate),
           ...times,
           location: $("#rescheduleLocation").value.trim(),
@@ -1913,8 +2365,9 @@
         }
         application.date = newDate;
         application.time = newTime;
-        application.counselor = newCounselor.name;
-        application.counselorId = newCounselor.id;
+        application.counselor = newCounselor.full_name;
+        application.counselorId = newCounselor.linked_profile_id || null;
+        application.counselorDirectoryId = newCounselor.id;
         application.counselorPhone = newCounselor.phone || "";
         application.location = $("#rescheduleLocation").value.trim();
         application.scheduleChanged = true;
@@ -1934,10 +2387,49 @@
       $("#approvalBackdrop").addEventListener("click", event => {
         if (event.target === $("#approvalBackdrop")) closeApproval();
       });
+      $("#cancelCloseAppointment").addEventListener("click", closeAppointmentModal);
+      $("#closeAppointmentBackdrop").addEventListener("click", event => {
+        if (event.target === $("#closeAppointmentBackdrop")) closeAppointmentModal();
+      });
+      $("#closeAppointmentForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!event.currentTarget.reportValidity()) return;
+        const appointment = sampleAppointments.find(item => item.dbId === state.closingAppointmentId);
+        if (!appointment || !canCloseAppointment(appointment)) {
+          $("#closeAppointmentMessage").textContent = "Sesi ini tidak lagi memenuhi syarat untuk ditutup.";
+          return;
+        }
+        const status = $("#closeAppointmentStatus").value;
+        const reason = $("#closeAppointmentReason").value.trim();
+        if (reason.length < 3) {
+          $("#closeAppointmentMessage").textContent = "Catatan admin minimal 3 karakter.";
+          return;
+        }
+        const submit = event.currentTarget.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        const { data: updatedAppointment, error } = await adminContext.client.from("appointments").update({
+          status,
+          admin_close_reason: reason
+        }).eq("id", appointment.dbId).select("id").maybeSingle();
+        if (error || !updatedAppointment) {
+          $("#closeAppointmentMessage").textContent = `Status gagal disimpan: ${error?.message || "Sesi tidak ditemukan atau tidak dapat diperbarui."}`;
+          submit.disabled = false;
+          return;
+        }
+        appointment.status = status === "no_response" ? "Tidak ada respons" : "Dibatalkan";
+        appointment.adminCloseReason = reason;
+        closeAppointmentModal();
+        renderApplications();
+        renderCalendar();
+        renderSelectedDay();
+        showToast(`Sesi ${appointment.id} ditutup dengan status ${appointment.status}.`);
+        submit.disabled = false;
+      });
       document.addEventListener("keydown", event => {
         if (event.key === "Escape" && !$("#approvalBackdrop").hidden) closeApproval();
         if (event.key === "Escape" && !$("#rescheduleBackdrop").hidden) closeReschedule();
         if (event.key === "Escape" && !$("#addSessionBackdrop").hidden) closeAddSession();
+        if (event.key === "Escape" && !$("#closeAppointmentBackdrop").hidden) closeAppointmentModal();
       });
       $$("[data-range]").forEach(button => button.addEventListener("click", () => {
         state.range = Number(button.dataset.range);
@@ -2003,6 +2495,7 @@
       $("#showAddSession").addEventListener("click", openAddSession);
       $("#manualStudentMode").addEventListener("change", updateManualStudentMode);
       $("#manualDate").addEventListener("change", renderManualSessionTimes);
+      $("#manualCounselor").addEventListener("change", renderManualSessionTimes);
       $("#manualMode").addEventListener("change", () => {
         updateManualLocationField();
         renderManualSessionTimes();
@@ -2029,10 +2522,10 @@
           $("#signedInRole").textContent = isSuperadmin ? "Superadmin" : "Administrator";
           $("#accessRoleLabel").textContent = isSuperadmin ? "Akses superadmin" : "Akses administrator";
           $("#accessRoleDescription").textContent = isSuperadmin
-            ? "Anda dapat mengelola layanan dan membuat akun admin serta konselor."
+            ? "Kelola layanan, direktori konselor, dan akun admin pada menu terpisah."
             : "Data ditampilkan sesuai role admin akun yang sedang masuk.";
           $("#superadminAccountPanel").hidden = !isSuperadmin;
-          updateStaffAccountFields();
+          $$("[data-superadmin-only]").forEach(element => { element.hidden = !isSuperadmin; });
           await loadAdminData(context);
           render();
         } catch (error) {

@@ -61,6 +61,17 @@
       .calendar-event { width: 100%; overflow: hidden; color: #716b70; font-size: 7px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
       .calendar-event.has-session { color: var(--red); font-weight: 650; }
       .layout { display: grid; grid-template-columns: minmax(245px, .72fr) minmax(0, 1.5fr); gap: 14px; align-items: start; }
+      .availability-panel { overflow: hidden; }
+      .availability-notice { color: var(--muted); font-size: 9px; line-height: 1.5; }
+      .availability-notice.error { color: var(--red); }
+      .availability-grid-wrap { overflow-x: auto; }
+      .availability-grid { min-width: 730px; }
+      .availability-row { display: grid; grid-template-columns: 75px 82px repeat(8, minmax(52px, 1fr)); gap: 5px; align-items: center; padding: 7px 0; border-bottom: 1px solid #f1eeee; }
+      .availability-row.header { color: #858085; font-size: 8px; font-weight: 650; }
+      .availability-day, .availability-mode { color: #514d50; font-size: 8px; font-weight: 650; }
+      .availability-slot { display: grid; min-height: 31px; place-items: center; border: 1px solid var(--line); border-radius: 5px; background: white; color: #817b80; font-size: 7px; }
+      .availability-slot input { width: 13px; height: 13px; margin: 0 0 3px; accent-color: var(--red); }
+      .availability-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 8px; }
       .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; margin-bottom: 14px; }
       .panel-heading h2 { margin: 0; font-size: 12px; font-weight: 680; }
       .panel-heading p { margin: 5px 0 0; color: var(--muted); font-size: 8px; }
@@ -126,6 +137,7 @@
         .user-copy { display: none; }
         .page { width: calc(100% - 26px); margin-top: 20px; }
         .layout { grid-template-columns: 1fr; }
+        .availability-actions { align-items: flex-start; flex-direction: column; }
         .fields { grid-template-columns: 1fr; }
         .field.wide { grid-column: auto; }
         .calendar-grid { gap: 3px; }

@@ -28,6 +28,7 @@
       <nav class="workspace-nav" aria-label="Menu konselor">
         <button class="nav-tab active" data-tab="schedule" type="button" aria-pressed="true">Jadwal saya</button>
         <button class="nav-tab" data-tab="history" type="button" aria-pressed="false">Riwayat konseling</button>
+        <button class="nav-tab" data-tab="availability" type="button" aria-pressed="false">Ketersediaan praktik</button>
       </nav>
       <section class="panel calendar-panel" id="scheduleCalendar" aria-label="Kalender jadwal konseling">
         <div class="calendar-heading">
@@ -52,6 +53,12 @@
         <section class="panel">
           <div class="panel-heading"><div><h2>Riwayat sesi</h2><p>Laporan konseling yang telah disimpan.</p></div><span class="count-label" id="historyCount"></span></div>
           <div class="session-list" id="historyList"></div>
+        </section>
+        <section class="panel availability-panel" id="availabilityView" hidden>
+          <div class="panel-heading"><div><h2>Ketersediaan praktik mingguan</h2><p>Atur hari, mode, dan jam praktik Anda. Jam mengikuti layanan kampus pukul 08.00–16.00.</p></div></div>
+          <p class="availability-notice" id="availabilityNotice" aria-live="polite"></p>
+          <div class="availability-grid-wrap"><div class="availability-grid" id="availabilityGrid"></div></div>
+          <div class="availability-actions"><span>Setiap pilihan mengatur satu sesi berdurasi 60 menit.</span><button class="primary-button" id="saveAvailability" type="button">Simpan ketersediaan</button></div>
         </section>
         <section class="panel detail-panel" id="historyDetail" aria-live="polite"></section>
       </section>

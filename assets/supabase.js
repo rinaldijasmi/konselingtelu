@@ -199,10 +199,16 @@
   }
 
   async function loadAvailableSlots(client, startDate, endDate) {
-    const { data, error } = await client.rpc("available_counseling_slots_range", {
+    const { data, error } = await client.rpc("available_counselor_slots_range", {
       p_start_date: startDate,
       p_end_date: endDate
     });
+    if (error) throw error;
+    return data;
+  }
+
+  async function loadCounselorDirectory(client) {
+    const { data, error } = await client.rpc("list_counselor_directory");
     if (error) throw error;
     return data;
   }
@@ -234,6 +240,7 @@
     loadAppointments,
     loadReports,
     loadAvailableSlots,
+    loadCounselorDirectory,
     normalizeTime,
     displayTime
   };

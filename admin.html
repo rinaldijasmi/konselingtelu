@@ -34,7 +34,8 @@
         <hr class="side-divider">
         <p class="side-label">Pengelolaan</p>
         <nav class="nav-list" aria-label="Menu pengelolaan">
-          <button class="nav-button" data-view="counselors" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0m3-12a3 3 0 0 1 0 5.8m1.5 2.6a5 5 0 0 1 2.5 3.6"/></svg><span>Bagian konselor</span></button>
+          <button class="nav-button" data-view="counselors" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0m3-12a3 3 0 0 1 0 5.8m1.5 2.6a5 5 0 0 1 2.5 3.6"/></svg><span>Manajemen konselor</span></button>
+          <button class="nav-button" data-view="admins" data-superadmin-only hidden type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin & akun</span></button>
           <button class="nav-button" data-view="reports" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h9l4 4v14H5V3h1Zm8 0v5h5M8 12h8M8 16h8"/></svg><span>Laporan Konseling</span></button>
         </nav>
         <div class="sidebar-bottom"><strong id="accessRoleLabel">Akses administrator</strong><span id="accessRoleDescription">Data ditampilkan sesuai role admin akun yang sedang masuk.</span></div>
@@ -160,38 +161,43 @@
             </div>
           </section>
           <section id="counselorsView" hidden>
-            <div class="heading-row"><div><h1>Bagian konselor</h1><p class="heading-subtitle">Kelola daftar konselor dan status ketersediaan untuk layanan konseling.</p></div><a class="secondary-button" href="counselor.html">Buka pratinjau role konselor</a></div>
+            <div class="heading-row"><div><h1>Manajemen konselor</h1><p class="heading-subtitle">Kelola profil direktori yang dapat dilihat mahasiswa. Akun login dan jadwal praktik diatur terpisah.</p></div></div>
             <section class="panel">
-              <div class="counselor-toolbar"><div><h2>Konselor layanan konseling</h2><p id="counselorCount"></p></div><button class="primary-button" id="showAddCounselor" type="button">Tambah konselor</button></div>
+              <div class="counselor-toolbar"><div><h2>Direktori konselor</h2><p id="counselorCount"></p></div><button class="primary-button" id="showAddCounselor" type="button">Tambah konselor</button></div>
+              <p class="directory-migration-notice" id="directoryMigrationNotice" role="status" hidden>Untuk menyimpan/edit profil, jalankan migrasi <code>supabase/counselor-directory-management.sql</code> di Supabase SQL Editor. Semua konselor lama tetap tampil untuk pratinjau.</p>
+              <p class="directory-migration-notice" id="scheduleMigrationNotice" role="status" hidden>Untuk mengatur jadwal praktik dan pengecualian tanggal, jalankan migrasi <code>supabase/counselor-schedule-management.sql</code> di Supabase SQL Editor.</p>
+              <p class="directory-migration-notice" id="directoryBookingMigrationNotice" role="status" hidden>Agar jadwal konselor yang dikelola admin tampil dan dapat diajukan mahasiswa tanpa akun konselor aktif, jalankan <code>supabase/counselor-directory-booking.sql</code> di Supabase SQL Editor.</p>
               <form class="counselor-add-form" id="addCounselorForm" hidden>
                 <div class="counselor-add-field"><label for="newCounselorName">Nama konselor</label><input id="newCounselorName" name="name" autocomplete="name" required></div>
-                <div class="counselor-add-field"><label for="newCounselorEmail">Email akun</label><input id="newCounselorEmail" name="email" type="email" autocomplete="email" required></div>
+                <div class="counselor-add-field"><label for="newCounselorSpecialties">Spesialisasi</label><input id="newCounselorSpecialties" name="specialties" placeholder="Contoh: stres, kecemasan, pengembangan diri" required></div>
+                <div class="counselor-add-field"><label for="newCounselorEmail">Email direktori</label><input id="newCounselorEmail" name="email" type="email" autocomplete="off" placeholder="nama@example.invalid" required></div>
                 <div class="counselor-add-field"><label for="newCounselorPhone">Nomor WhatsApp</label><input id="newCounselorPhone" name="phone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" pattern="[0-9+() .-]{8,24}" required></div>
                 <p class="counselor-form-message" id="counselorFormMessage" aria-live="polite"></p>
-                <p class="counselor-form-message">Akun dibuat tanpa email undangan. Pengguna akan diminta membuat kata sandi pribadi saat login pertama.</p>
-                <div class="counselor-add-actions"><button class="secondary-button" id="cancelAddCounselor" type="button">Batal</button><button class="primary-button" type="submit">Buat akun & kata sandi awal</button></div>
+                <p class="counselor-form-note">Email berakhiran <code>example.invalid</code> hanya placeholder, bukan akun login. Mahasiswa dapat melihat profil; pemesanan aktif setelah akun konselor dan jadwal tersedia.</p>
+                <div class="counselor-add-actions"><button class="secondary-button" id="cancelAddCounselor" type="button">Batal</button><button class="primary-button" type="submit">Simpan profil konselor</button></div>
               </form>
-              <section class="staff-account-panel" id="superadminAccountPanel" hidden aria-labelledby="staffAccountHeading">
-                <div class="counselor-toolbar"><div><h2 id="staffAccountHeading">Akun administrator dan konselor</h2><p>Buat akun tanpa undangan email. Pengguna wajib mengganti kata sandi saat login pertama.</p></div></div>
-                <form class="counselor-add-form" id="staffAccountForm">
-                  <div class="counselor-add-field"><label for="staffAccountName">Nama lengkap</label><input id="staffAccountName" name="full_name" autocomplete="name" maxlength="120" required></div>
-                  <div class="counselor-add-field"><label for="staffAccountEmail">Email akun</label><input id="staffAccountEmail" name="email" type="email" autocomplete="email" required></div>
-                  <div class="counselor-add-field"><label for="staffAccountRole">Role akun</label><select id="staffAccountRole" name="role" required><option value="counselor">Konselor</option><option value="admin">Admin</option></select></div>
-                  <div class="counselor-add-field" id="staffAccountPhoneField"><label for="staffAccountPhone">Nomor WhatsApp konselor</label><input id="staffAccountPhone" name="phone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" pattern="[0-9+() .-]{8,24}"></div>
-                  <p class="counselor-form-message" id="staffAccountMessage" aria-live="polite"></p>
-                  <div class="counselor-add-actions"><button class="primary-button" type="submit">Buat akun & kata sandi awal</button></div>
-                </form>
-                <div class="staff-accounts" id="staffAccounts" aria-live="polite"></div>
-              </section>
-              <div class="temporary-password" id="temporaryPasswordPanel" hidden role="status">
-                <div><strong>Kata sandi sementara · tampil sekali</strong><p id="temporaryPasswordNote"></p><code id="temporaryPasswordValue"></code></div>
-                <button class="secondary-button" id="copyTemporaryPassword" type="button">Salin kata sandi</button>
-                <button class="secondary-button" id="dismissTemporaryPassword" type="button">Tutup</button>
-                <p class="temporary-password-warning">Sampaikan melalui jalur yang aman. Pengguna wajib menggantinya saat login pertama. Kata sandi ini tidak disimpan dan tidak dapat dilihat lagi.</p>
-              </div>
-              <div class="counselor-roster" id="counselorsList"></div>
+              <div class="directory-admin-list" id="counselorDirectoryList"></div>
             </section>
           </section>
+          <section id="adminsView" hidden>
+            <div class="heading-row"><div><h1>Admin & akun</h1><p class="heading-subtitle">Kelola akun administrator terpisah dari direktori konselor.</p></div></div>
+            <section class="panel staff-account-panel" id="superadminAccountPanel" aria-labelledby="staffAccountHeading">
+              <div class="counselor-toolbar"><div><h2 id="staffAccountHeading">Akun administrator</h2><p>Buat akun admin tanpa undangan email. Pengguna wajib mengganti kata sandi saat login pertama.</p></div></div>
+              <form class="counselor-add-form" id="staffAccountForm">
+                <div class="counselor-add-field"><label for="staffAccountName">Nama lengkap</label><input id="staffAccountName" name="full_name" autocomplete="name" maxlength="120" required></div>
+                <div class="counselor-add-field"><label for="staffAccountEmail">Email akun</label><input id="staffAccountEmail" name="email" type="email" autocomplete="email" required></div>
+                <p class="counselor-form-message" id="staffAccountMessage" aria-live="polite"></p>
+                <div class="counselor-add-actions"><button class="primary-button" type="submit">Buat akun admin</button></div>
+              </form>
+              <div class="staff-accounts" id="staffAccounts" aria-live="polite"></div>
+            </section>
+          </section>
+          <div class="temporary-password" id="temporaryPasswordPanel" hidden role="status">
+            <div><strong>Kata sandi sementara · tampil sekali</strong><p id="temporaryPasswordNote"></p><code id="temporaryPasswordValue"></code></div>
+            <button class="secondary-button" id="copyTemporaryPassword" type="button">Salin kata sandi</button>
+            <button class="secondary-button" id="dismissTemporaryPassword" type="button">Tutup</button>
+            <p class="temporary-password-warning">Sampaikan melalui jalur yang aman. Pengguna wajib menggantinya saat login pertama. Kata sandi ini tidak disimpan dan tidak dapat dilihat lagi.</p>
+          </div>
           <section id="reportsView" hidden>
             <div class="heading-row"><div><h1>Laporan Konseling</h1><p class="heading-subtitle">Riwayat sesi dan laporan yang diisi konselor. Admin dapat melihat, mengunduh, atau mencetak laporan.</p></div></div>
             <div class="report-layout">
@@ -236,7 +242,7 @@
     <div class="approval-backdrop" id="approvalBackdrop" hidden>
       <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="approvalTitle">
         <h2 id="approvalTitle">Konfirmasi jadwal konseling</h2>
-        <p class="approval-intro">Sesuaikan tanggal dan jam pilihan mahasiswa bila diperlukan, lalu pilih konselor dan lengkapi detail layanan.</p>
+        <p class="approval-intro">Sesuaikan tanggal dan jam pilihan mahasiswa bila diperlukan, lalu pilih konselor direktori. Akun konselor aktif tidak diperlukan untuk konfirmasi admin.</p>
         <div class="approval-summary" id="approvalSummary"></div>
         <form id="approvalForm">
           <div class="approval-fields">
@@ -278,6 +284,20 @@
           </div>
           <p class="approval-message" id="manualSessionMessage" aria-live="polite"></p>
           <div class="approval-actions"><button class="secondary-button" id="cancelAddSession" type="button">Batal</button><button class="primary-button" type="submit">Buat sesi</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="approval-backdrop" id="closeAppointmentBackdrop" hidden>
+      <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="closeAppointmentTitle">
+        <h2 id="closeAppointmentTitle">Tutup sesi konseling</h2>
+        <p class="approval-intro" id="closeAppointmentSummary"></p>
+        <form id="closeAppointmentForm">
+          <div class="approval-fields">
+            <div class="approval-field wide"><label for="closeAppointmentStatus">Status akhir</label><select id="closeAppointmentStatus" required><option value="no_response">Tidak ada respons mahasiswa</option><option value="cancelled">Dibatalkan</option></select></div>
+            <div class="approval-field wide"><label for="closeAppointmentReason">Catatan admin (wajib)</label><textarea id="closeAppointmentReason" required minlength="3" maxlength="1000"></textarea></div>
+          </div>
+          <p class="approval-message" id="closeAppointmentMessage" aria-live="polite"></p>
+          <div class="approval-actions"><button class="secondary-button" id="cancelCloseAppointment" type="button">Kembali</button><button class="primary-button" type="submit">Simpan status</button></div>
         </form>
       </section>
     </div>

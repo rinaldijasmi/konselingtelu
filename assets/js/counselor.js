@@ -70,8 +70,84 @@
       let calendarMonthDate = monthStart(selectedCalendarDate);
       let pendingReportSessionId = null;
       let toastTimer;
+      let counselorDirectoryId = null;
+      const availabilityDays = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+      const availabilityModes = ["Online", "Tatap muka"];
+      const availabilityHours = Array.from({ length: 8 }, (_, index) => `${String(index + 8).padStart(2, "0")}.00–${String(index + 9).padStart(2, "0")}.00`);
+      const availability = new Map();
       const $ = selector => document.querySelector(selector);
       const $$ = selector => [...document.querySelectorAll(selector)];
+
+      function availabilityKey(weekday, mode) {
+        return `${weekday}-${mode}`;
+      }
+
+      function renderAvailability() {
+        const grid = $("#availabilityGrid");
+        grid.replaceChildren();
+        const header = document.createElement("div");
+        header.className = "availability-row header";
+        header.innerHTML = `<span>Hari</span><span>Jenis sesi</span>${availabilityHours.map(hour => `<span>${escapeHtml(hour)}</span>`).join("")}`;
+        grid.append(header);
+        availabilityDays.forEach((day, weekday) => availabilityModes.forEach(mode => {
+          const row = document.createElement("div");
+          row.className = "availability-row";
+          const dayLabel = document.createElement("span");
+          dayLabel.className = "availability-day";
+          dayLabel.textContent = mode === "Online" ? day : "";
+          const modeLabel = document.createElement("span");
+          modeLabel.className = "availability-mode";
+          modeLabel.textContent = mode;
+          row.append(dayLabel, modeLabel);
+          const slots = availability.get(availabilityKey(weekday, mode)) || Array(8).fill(false);
+          slots.forEach((open, index) => {
+            const label = document.createElement("label");
+            label.className = "availability-slot";
+            label.title = availabilityHours[index];
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.checked = open;
+            input.setAttribute("aria-label", `${day}, ${mode}, ${availabilityHours[index]}`);
+            input.addEventListener("change", () => {
+              const updated = [...(availability.get(availabilityKey(weekday, mode)) || Array(8).fill(false))];
+              updated[index] = input.checked;
+              availability.set(availabilityKey(weekday, mode), updated);
+            });
+            label.append(input, document.createTextNode(availabilityHours[index]));
+            row.append(label);
+          });
+          grid.append(row);
+        }));
+      }
+
+      async function loadCounselorAvailability(context) {
+        const { data: directory, error: directoryError } = await context.client
+          .from("counselor_directory")
+          .select("id")
+          .eq("linked_profile_id", counselor.id)
+          .maybeSingle();
+        if (directoryError) throw directoryError;
+        counselorDirectoryId = directory?.id || null;
+        const notice = $("#availabilityNotice");
+        if (!counselorDirectoryId) {
+          notice.classList.add("error");
+          notice.textContent = "Akun Anda belum ditautkan ke direktori konselor. Hubungi admin untuk mengaktifkan pengaturan jadwal.";
+          $("#saveAvailability").disabled = true;
+          renderAvailability();
+          return;
+        }
+        const { data: rows, error } = await context.client
+          .from("counselor_availability")
+          .select("weekday,mode,open_slots")
+          .eq("directory_id", counselorDirectoryId);
+        if (error) throw error;
+        availability.clear();
+        rows.forEach(row => availability.set(availabilityKey(row.weekday, row.mode), row.open_slots));
+        notice.classList.remove("error");
+        notice.textContent = "Centang jam praktik yang ingin ditawarkan. Perubahan berlaku untuk pendaftaran baru.";
+        $("#saveAvailability").disabled = false;
+        renderAvailability();
+      }
 
       async function loadCounselorData(context) {
         const { client } = context;
@@ -140,7 +216,7 @@
           counselor.id = context.profile.id;
           counselor.name = context.profile.full_name || context.user.email;
           $("#signedInCounselor").textContent = counselor.name;
-          await loadCounselorData(context);
+          await Promise.all([loadCounselorData(context), loadCounselorAvailability(context)]);
           render();
         } catch (error) {
           window.counselingBackend.showAuthError(new Error(`Gagal memuat jadwal konselor: ${error.message}`));
@@ -528,7 +604,32 @@
         });
         $("#scheduleView").hidden = tab !== "schedule";
         $("#historyView").hidden = tab !== "history";
+        $("#availabilityView").hidden = tab !== "availability";
       }));
+      $("#saveAvailability").addEventListener("click", async () => {
+        if (!counselorDirectoryId) return;
+        const settings = [];
+        availabilityDays.forEach((_, weekday) => availabilityModes.forEach(mode => {
+          settings.push({
+            weekday,
+            mode,
+            open_slots: availability.get(availabilityKey(weekday, mode)) || Array(8).fill(false)
+          });
+        }));
+        $("#saveAvailability").disabled = true;
+        try {
+          const { error } = await window.counselingBackend.getClient().rpc("save_counselor_availability", { p_settings: settings });
+          if (error) throw error;
+          $("#availabilityNotice").textContent = "Ketersediaan praktik berhasil disimpan.";
+          showToast("Jadwal praktik berhasil disimpan.");
+        } catch (error) {
+          $("#availabilityNotice").classList.add("error");
+          $("#availabilityNotice").textContent = `Jadwal gagal disimpan: ${error.message}`;
+          showToast(`Jadwal gagal disimpan: ${error.message}`);
+        } finally {
+          $("#saveAvailability").disabled = false;
+        }
+      });
       $("#cancelReport").addEventListener("click", closeReportForm);
       $("#reportModal").addEventListener("click", event => {
         if (event.target === $("#reportModal")) closeReportForm();

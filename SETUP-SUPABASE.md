@@ -18,11 +18,12 @@ Saat mengubah tampilan, edit CSS halaman terkait. Untuk perilaku halaman, edit b
 
 1. Buat proyek PostgreSQL di Supabase.
 2. Buka **SQL Editor**, jalankan seluruh isi [`supabase/schema.sql`](./supabase/schema.sql).
-3. Buka **Project Settings → API** dan salin Project URL serta `anon`/publishable key.
-4. Salin `assets/supabase-config.example.js` menjadi `assets/supabase-config.js`, lalu isikan URL dan anon key. File konfigurasi ini diabaikan Git.
-5. Buka **Authentication → URL Configuration**, atur Site URL dan Redirect URLs ke alamat lokal yang dipakai untuk menjalankan preview (misalnya `http://localhost:8000/index.html` dan `http://127.0.0.1:8000/index.html`).
-6. Agar akun mahasiswa dapat langsung digunakan setelah pendaftaran, buka **Authentication → Providers → Email** dan nonaktifkan **Confirm email**. Pendaftaran tetap memakai Supabase Auth dan kata sandi; hanya verifikasi email yang dilewati. Aktifkan kembali verifikasi email ketika kebijakan layanan mengharuskannya. Tanpa verifikasi email, sistem tidak memastikan bahwa pendaftar menguasai alamat email yang digunakan.
-7. Deploy Edge Functions untuk pembuatan akun staf dan penggantian kata sandi awal:
+3. Jalankan [`supabase/counselor-directory-booking.sql`](./supabase/counselor-directory-booking.sql) agar jadwal direktori yang diatur admin dapat tampil dan diajukan mahasiswa tanpa akun konselor aktif. Untuk database lama, jalankan dahulu migrasi booking serta [`supabase/counselor-schedule-management.sql`](./supabase/counselor-schedule-management.sql).
+4. Buka **Project Settings → API** dan salin Project URL serta `anon`/publishable key.
+5. Salin `assets/supabase-config.example.js` menjadi `assets/supabase-config.js`, lalu isikan URL dan anon key. File konfigurasi ini diabaikan Git.
+6. Buka **Authentication → URL Configuration**, atur Site URL dan Redirect URLs ke alamat lokal yang dipakai untuk menjalankan preview (misalnya `http://localhost:8000/index.html` dan `http://127.0.0.1:8000/index.html`).
+7. Agar akun mahasiswa dapat langsung digunakan setelah pendaftaran, buka **Authentication → Providers → Email** dan nonaktifkan **Confirm email**. Pendaftaran tetap memakai Supabase Auth dan kata sandi; hanya verifikasi email yang dilewati. Aktifkan kembali verifikasi email ketika kebijakan layanan mengharuskannya. Tanpa verifikasi email, sistem tidak memastikan bahwa pendaftar menguasai alamat email yang digunakan.
+8. Deploy Edge Functions untuk pembuatan akun staf dan penggantian kata sandi awal:
 
 ```sh
 supabase functions deploy create-counselor --project-ref YOUR_PROJECT_ID
@@ -66,6 +67,37 @@ Jalankan seluruh isi [`supabase/fix-profile-rls-recursion.sql`](./supabase/fix-p
 Untuk proyek yang sudah menjalankan skema lama, jalankan seluruh isi [`supabase/service-scheduling-revision.sql`](./supabase/service-scheduling-revision.sql) satu kali melalui **SQL Editor → New query**. Migrasi ini mempertahankan pengaturan jam mingguan yang sudah ada, menambahkan slot terpisah Online/Tatap muka dan pengecualian tanggal tertentu, serta memperbarui fungsi ketersediaan jadwal. Setelah berhasil, muat ulang aplikasi.
 
 Admin kemudian dapat menambahkan sesi terkonfirmasi melalui **Jadwal & jam layanan → Tambah sesi konseling**. Pada pengaturan jam, pilih tanggal, jenis sesi, lalu pilih apakah perubahan berlaku untuk tanggal itu saja atau berulang setiap minggu. Slot yang dipilih tetap dibatasi pada pukul 08.00–16.00 dan dicek kembali di database.
+
+### Direktori, jadwal praktik, dan penutupan sesi
+
+Untuk proyek yang sudah berjalan, jalankan seluruh isi [`supabase/counselor-booking-revision.sql`](./supabase/counselor-booking-revision.sql) satu kali di **SQL Editor → New query** setelah migrasi jam layanan dan mahasiswa tamu. Migrasi ini menambahkan roster konselor, jadwal praktik mingguan per konselor, reservasi slot berdasarkan konselor, serta status penutupan `Tidak ada respons` dan `Dibatalkan`. Setiap penutupan memerlukan catatan admin dan hanya dapat dilakukan pada sesi terkonfirmasi yang jatuh hari ini atau sebelumnya. Slot dari pengajuan mahasiswa akan terkunci sejak statusnya masih menunggu.
+
+Deploy ulang Edge Function setelah migrasi agar admin dapat menghubungkan akun ke roster:
+
+```sh
+supabase functions deploy create-counselor --project-ref YOUR_PROJECT_ID
+```
+
+Setelah migrasi booking pernah dijalankan, gunakan migrasi tambahan [`supabase/counselor-directory-management.sql`](./supabase/counselor-directory-management.sql) untuk kolom kontak, alamat email placeholder, dan penyimpanan profil dari menu admin. Email `@example.invalid` hanya data contoh, bukan akun login atau alamat yang dapat menerima email. Mahasiswa tetap dapat melihat profil direktori, tetapi pemesanan memerlukan akun konselor nyata yang aktif dan jadwal praktik. Admin dapat mengelola profil dari **Manajemen konselor**; pengelolaan akun admin berada di menu **Admin & akun** khusus superadmin. Email login yang sudah tertaut tetap dikelola sebagai akun Auth, terpisah dari email direktori.
+
+Konselor mengatur hari, mode online/tatap muka, dan slot praktik dari tab **Ketersediaan praktik**. Untuk mengelola jadwal mingguan setiap konselor dan pengecualian jika konselor berhalangan, jalankan migrasi [`supabase/counselor-schedule-management.sql`](./supabase/counselor-schedule-management.sql) satu kali di SQL Editor setelah migrasi booking dan direktori di atas. Setelah itu jalankan [`supabase/counselor-directory-booking.sql`](./supabase/counselor-directory-booking.sql) agar slot yang diatur admin dapat ditampilkan dan diajukan mahasiswa tanpa akun konselor aktif. Lalu buka **Manajemen konselor → Atur jadwal** untuk memilih slot mingguan pukul 08.00–16.00 atau mengatur pengecualian per tanggal dan mode; tanpa pengecualian, jadwal mingguan tetap berlaku. Pengecualian tidak dapat menutup slot yang sudah memiliki pengajuan atau sesi aktif; selesaikan/jadwalkan ulang sesi itu dahulu. Jam layanan kampus tetap berlaku sebagai batas ketersediaan. Pengajuan tanpa akun konselor tetap masuk ke admin dan dapat dikonfirmasi oleh admin; konselor baru dapat mengakses sesi di akunnya setelah akun ditautkan dan aktif. Admin dapat menutup sesi lama yang masih terkonfirmasi dari kalender harian; sesi tertutup tidak masuk ke ruang laporan konselor dan catatannya terlihat oleh mahasiswa.
+
+#### Data dummy jadwal untuk preview
+
+Untuk mencoba tampilan dengan data contoh, jalankan [`supabase/dummy-schedule-preview.sql`](./supabase/dummy-schedule-preview.sql) di SQL Editor setelah migrasi mahasiswa tamu, jadwal konselor, dan booking direktori. File mengimpor 191 sesi dengan tanggal 30 September–29 Oktober 2026, mempertahankan jam, konselor, media, serta status sumber. Nama/NIM/kontak mahasiswa dan seluruh detail konseling diganti nilai dummy. Data ini hanya untuk proyek preview/pengembangan, bukan produksi; sesi mendatang berstatus terjadwal akan menempati slot konselor terkait. Pengimporan aman dijalankan ulang dan melewati kode `DUMMY-XLSX-*` yang sudah ada. Data tersebut muncul sebagai mahasiswa tamu di akun admin, bukan sebagai riwayat mahasiswa pada akun mahasiswa asli.
+
+Untuk menghapus hanya data contoh ini, jalankan perintah berikut satu per satu di SQL Editor:
+
+```sql
+delete from public.appointments where code like 'DUMMY-XLSX-%';
+delete from public.guest_students where nim like 'DUMMY-XLSX-%';
+delete from public.counselor_directory
+where source_key = 'dummy-import-unassigned'
+  and not exists (
+    select 1 from public.appointments
+    where counselor_directory_id = counselor_directory.id
+  );
+```
 
 ### Data program studi dan filter laporan
 

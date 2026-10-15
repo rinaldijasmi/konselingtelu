@@ -49,14 +49,27 @@ Deno.serve(async request => {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: corsHeaders });
   }
-  const input = body as { email?: unknown; full_name?: unknown; phone?: unknown };
+  const input = body as { email?: unknown; full_name?: unknown; phone?: unknown; directory_id?: unknown };
   const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
   const fullName = typeof input.full_name === "string" ? input.full_name.trim().replace(/\s+/g, " ") : "";
   const phone = typeof input.phone === "string" ? normalizeIndonesianPhone(input.phone) : "";
+  const directoryId = typeof input.directory_id === "string" ? input.directory_id : null;
   if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
       !fullName || fullName.length < 2 || fullName.length > 120 ||
-      phone.length < 10 || phone.length > 15) {
+      phone.length < 10 || phone.length > 15 ||
+      (directoryId !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(directoryId))) {
     return Response.json({ error: "A valid email, name, and WhatsApp number are required" }, { status: 400, headers: corsHeaders });
+  }
+  if (directoryId) {
+    const { data: directoryEntry, error: directoryError } = await adminClient
+      .from("counselor_directory")
+      .select("id,linked_profile_id")
+      .eq("id", directoryId)
+      .maybeSingle();
+    if (directoryError) return Response.json({ error: directoryError.message }, { status: 500, headers: corsHeaders });
+    if (!directoryEntry || directoryEntry.linked_profile_id) {
+      return Response.json({ error: "The counselor directory entry is unavailable or already linked" }, { status: 409, headers: corsHeaders });
+    }
   }
 
   const temporaryPassword = generateTemporaryPassword();
@@ -84,6 +97,23 @@ Deno.serve(async request => {
       ? `${profileMessage}; additionally failed to remove the incomplete auth account: ${rollbackError.message}`
       : profileMessage;
     return Response.json({ error: errorMessage }, { status: 500, headers: corsHeaders });
+  }
+
+  if (directoryId) {
+    const { data: linkedEntry, error: linkError } = await adminClient.from("counselor_directory").update({
+      full_name: fullName,
+      phone,
+      contact_email: email,
+      linked_profile_id: created.user.id
+    }).eq("id", directoryId).is("linked_profile_id", null).select("id").maybeSingle();
+    if (linkError || !linkedEntry) {
+      const { error: rollbackError } = await adminClient.auth.admin.deleteUser(created.user.id);
+      const linkMessage = linkError?.message ?? "The directory entry was linked to another account";
+      const errorMessage = rollbackError
+        ? `${linkMessage}; additionally failed to remove the incomplete auth account: ${rollbackError.message}`
+        : linkMessage;
+      return Response.json({ error: errorMessage }, { status: 500, headers: corsHeaders });
+    }
   }
 
   const { error: registryError } = await adminClient.from("staff_account_registry").insert({

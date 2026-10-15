@@ -115,7 +115,7 @@
             <section id="scheduleView">
               <div class="heading-row">
                 <div><h1>Jadwal konseling</h1><p class="heading-subtitle">Pilih waktu yang nyaman untuk Anda.</p></div>
-                <div class="today-label" id="todayLabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span></span></div>
+                <div class="heading-actions"><button class="appointment-link" id="openCounselorDirectory" type="button">Kenali para konselor</button><div class="today-label" id="todayLabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span></span></div></div>
               </div>
               <div class="welcome-card">
                 <div class="welcome-copy"><p>Halo, <span id="welcomeName">Alya</span> 👋</p><h2>Mulai dari satu percakapan.</h2><p class="welcome-note">Pilih jadwal yang sesuai. Semua sesi bersifat privat dan suportif.</p></div>
@@ -141,7 +141,7 @@
                   <div class="calendar-legend"><span class="legend-item"><span class="legend-dot"></span>Jadwal tersedia</span><span class="legend-item"><span class="legend-dot current"></span>Tanggal dipilih</span></div>
                 </section>
                 <section class="panel slots-panel" aria-labelledby="slotHeading">
-                  <div class="panel-heading"><div><h2 id="slotHeading">Pilih waktu</h2><p>Pilih satu slot untuk mengajukan sesi</p></div></div>
+                  <div class="panel-heading"><div><h2 id="slotHeading">Pilih konselor</h2><p id="slotDescription">Pilih tanggal, konselor, lalu jam yang tersedia.</p></div></div>
                   <div class="selected-date"><div class="date-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div><div><strong id="selectedDateLabel"></strong><span>Durasi sesi 60 menit</span></div></div>
                   <div class="slot-list" id="slotList"></div>
                 </section>
@@ -160,6 +160,13 @@
       </div>
     </div>
 
+    <div class="modal-backdrop" id="directoryBackdrop" hidden>
+      <section class="modal directory-modal" role="dialog" aria-modal="true" aria-labelledby="directoryTitle">
+        <div class="modal-top"><div><h2 id="directoryTitle">Direktori konselor</h2><p>Kenali bidang layanan konselor Telkom University.</p></div><button class="close-button" id="closeCounselorDirectory" type="button" aria-label="Tutup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>
+        <p class="directory-note">Konselor yang belum memiliki akun aktif tetap ditampilkan, tetapi belum dapat dipilih untuk pemesanan.</p>
+        <div class="directory-list" id="counselorDirectoryList"></div>
+      </section>
+    </div>
     <div class="modal-backdrop" id="bookingBackdrop" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
         <div class="modal-top"><div><h2 id="bookingTitle">Ajukan sesi konseling</h2><p id="bookingIntro">Lengkapi data diri dan kebutuhan konseling Anda.</p></div><button class="close-button" data-close-modal type="button" aria-label="Tutup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>

@@ -209,6 +209,46 @@
       .counselor-toggle-track::after { position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0002; content: ""; transition: transform .15s; }
       .counselor-toggle[aria-checked="true"] .counselor-toggle-track { background: var(--green); }
       .counselor-toggle[aria-checked="true"] .counselor-toggle-track::after { transform: translateX(13px); }
+      .directory-admin-panel { margin-top: 14px; }
+      .directory-migration-notice { margin: 13px 0 0; padding: 10px 12px; border: 1px solid #f0dfb9; border-radius: 7px; background: #fffaf0; color: #76591d; font-size: 9px; line-height: 1.55; }
+      .directory-migration-notice code { font-size: 9px; }
+      .directory-admin-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr)); gap: 12px; margin-top: 14px; }
+      .directory-admin-card { display: grid; align-content: start; gap: 11px; padding: 15px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+      .directory-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      .directory-card-heading h3 { margin: 0; font-size: 12px; line-height: 1.45; }
+      .directory-card-heading p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+      .directory-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+      .directory-meta span { padding: 5px 7px; border-radius: 12px; background: #f7f5f5; color: #706b6f; font-size: 8px; }
+      .directory-admin-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .directory-admin-card label { display: grid; min-width: 0; gap: 5px; color: var(--muted); font-size: 8px; font-weight: 620; }
+      .directory-admin-card input { width: 100%; min-height: 34px; padding: 7px 8px; border: 1px solid #e5e1e3; border-radius: 5px; background: #fff; color: var(--ink); font: inherit; font-size: 9px; }
+      .directory-admin-card input[readonly] { background: #faf9f9; color: #676267; }
+      .directory-account-note { margin: -3px 0 0; color: #858084; font-size: 8px; line-height: 1.5; }
+      .directory-admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding-top: 2px; }
+      .directory-admin-status { color: var(--muted); font-size: 8px; }
+      .directory-admin-status.linked { color: var(--green); }
+      .directory-schedule-editor { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+      .directory-schedule-editor h4 { margin: 0; font-size: 10px; }
+      .directory-schedule-editor hr { width: 100%; margin: 2px 0; border: 0; border-top: 1px solid var(--line); }
+      .schedule-editor-note, .exception-current-note { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.55; }
+      .counselor-weekly-grid { display: grid; gap: 6px; }
+      .counselor-weekly-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 5px 8px; align-items: center; padding: 7px; border: 1px solid #f0edef; border-radius: 6px; }
+      .counselor-weekly-row > strong { font-size: 8px; }
+      .counselor-weekly-row > span { color: var(--muted); font-size: 8px; }
+      .counselor-weekly-row > div { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+      .counselor-weekly-row label, .counselor-exception-slots label { display: flex; min-height: 28px; align-items: center; justify-content: center; gap: 4px; padding: 4px; border: 1px solid #eee9eb; border-radius: 5px; background: #fff; color: #6f696d; font-size: 7px; font-weight: 500; }
+      .directory-admin-card .counselor-weekly-row input, .directory-admin-card .counselor-exception-slots input { width: 12px; min-height: 0; height: 12px; margin: 0; padding: 0; accent-color: var(--red); }
+      .date-exception-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .date-exception-fields input, .date-exception-fields select { width: 100%; min-height: 34px; padding: 6px; border: 1px solid #e5e1e3; border-radius: 5px; background: #fff; color: var(--ink); font: inherit; font-size: 8px; }
+      .counselor-exception-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+      .directory-empty { grid-column: 1 / -1; margin: 0; padding: 22px 14px; border: 1px dashed #ddd8da; border-radius: 8px; color: var(--muted); font-size: 10px; text-align: center; }
+      .activity-group { margin: 8px 0 12px; padding: 0 9px; border: 1px solid #f0edef; border-radius: 7px; }
+      .activity-group h3 { margin: 0 -9px; padding: 9px; border-bottom: 1px solid #f0edef; background: #fbf9fa; color: #514d50; font-size: 9px; }
+      .activity-entry { display: flex; align-items: center; gap: 8px; border-top: 1px solid #f1eff0; }
+      .activity-entry:first-of-type { border-top: 0; }
+      .activity-entry .activity-row { flex: 1; min-width: 0; border-top: 0; }
+      .close-session-button { flex: 0 0 auto; padding: 6px 8px; border: 1px solid #ead3d7; border-radius: 5px; background: white; color: var(--red); font-size: 8px; font-weight: 620; }
+      .close-session-button:hover { background: var(--red-soft); }
       .counselor-add-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--line); }
       .counselor-add-field { display: grid; gap: 5px; }
       .counselor-add-field label { font-size: 9px; font-weight: 650; }
@@ -232,6 +272,7 @@
       .temporary-password .temporary-password-warning { flex-basis: 100%; margin: 0; line-height: 1.5; }
       .counselor-add-actions { display: flex; justify-content: flex-end; gap: 7px; grid-column: 1 / -1; }
       .counselor-form-message { min-height: 13px; margin: 0; color: var(--red); font-size: 8px; grid-column: 1 / -1; }
+      .counselor-form-note { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.55; grid-column: 1 / -1; }
       .review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--line); }
       .danger-button { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; padding: 0 11px; border: 1px solid #f0dadd; border-radius: 6px; background: white; color: var(--red); font-size: 9px; font-weight: 620; }
       .danger-button:hover { background: #fff8f8; }
@@ -444,6 +485,8 @@
         .counselor-add-form { grid-template-columns: 1fr; }
         .counselor-add-actions, .counselor-form-message { grid-column: auto; }
         .counselor-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .directory-admin-fields { grid-template-columns: 1fr; }
+        .directory-card-heading { flex-direction: column; }
         .counselor-status { justify-self: start; grid-column: 1; }
         .counselor-toggle { grid-column: 2; grid-row: 1 / span 2; }
         .reschedule-fields { grid-template-columns: 1fr; }

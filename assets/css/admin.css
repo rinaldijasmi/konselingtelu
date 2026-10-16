@@ -441,6 +441,23 @@
       .pandu-scale.flagged .pandu-scale-track i { background: var(--red); }
       .pandu-scale strong { text-align: right; font-size: 8px; font-weight: 650; }
       .pandu-scale.flagged strong { color: var(--red); }
+      .pandu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .pandu-ai { margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+      .pandu-ai-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+      .pandu-ai-heading h3 { margin: 0; font-size: 12px; }
+      .pandu-ai-heading span { color: var(--muted); font-size: 8px; }
+      .pandu-ai-status { margin: 0; color: var(--muted); font-size: 9px; }
+      .pandu-ai-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+      .pandu-ai-card { padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 6px; background: #fff; }
+      .pandu-ai-card h4 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; font-size: 10px; }
+      .pandu-ai-card ul { margin: 0; padding-left: 15px; font-size: 9px; line-height: 1.6; }
+      .pandu-ai-card.validity.ok { border-left-color: var(--green); background: var(--green-soft); }
+      .pandu-ai-card.validity.warn { border-left-color: #d98a00; background: #fff7e6; }
+      .pandu-ai-card.validity.alert, .pandu-ai-card.risk { border-left-color: #c8283f; }
+      .pandu-ai-card.strength { border-left-color: var(--green); }
+      .pandu-ai-card.potential { border-left-color: #2f6fd6; }
+      .pandu-ai-card.consider { border-left-color: #d98a00; }
+      .pandu-ai-card.notable { border-left-color: var(--red); }
       .pandu-callout { margin: 12px 0 0; padding: 9px 10px; border-radius: 6px; font-size: 9px; line-height: 1.55; }
       .pandu-callout.alert { background: var(--red-soft); color: #8d1f31; }
       .pandu-callout.ok { background: var(--green-soft); color: var(--green); }
@@ -454,7 +471,7 @@
         .setting-panel { grid-row: 2; }
       }
       @media (max-width: 720px) {
-        .pandu-scale-grid, .pandu-resilience { grid-template-columns: 1fr; }
+        .pandu-scale-grid, .pandu-resilience, .pandu-ai-grid { grid-template-columns: 1fr; }
         .app-header { height: 60px; padding: 0 14px; }
         .header-brand { gap: 9px; }
         .header-brand img { width: 119px; }

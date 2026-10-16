@@ -132,6 +132,17 @@ Menu **Profiling PANDU** menampilkan hasil tes Personality, Adaptability, and Re
 3. Jalankan `pandu-import-00-clear.sql` (mengosongkan data lama; lewati jika ini impor pertama), lalu tiap file `pandu-import-01..NN.sql` berurutan di SQL Editor. Bagian bisa diulang karena memakai upsert per NIM; baris ganda untuk NIM yang sama hanya dimasukkan sekali.
 4. Untuk menghapus seluruh data: `truncate public.pandu_results;`
 
+#### Analisis AI (tombol "Analisis Hasil dengan AI")
+
+Tombol ini memanggil Edge Function `analyze-pandu`, yang membaca skor dari database lalu meminta analisis ke OpenAI (ChatGPT). Hanya admin/superadmin aktif yang bisa memakainya. Nama dan NIM tidak dikirim ke OpenAI. API key hanya tersimpan sebagai secret Supabase, bukan di Git atau browser.
+
+```bash
+supabase secrets set OPENAI_API_KEY=sk-... --project-ref YOUR_PROJECT_ID
+supabase functions deploy analyze-pandu --project-ref YOUR_PROJECT_ID
+```
+
+Model bawaan `gpt-4.1-mini`; ganti dengan `supabase secrets set OPENAI_MODEL=<nama-model>`. Setiap klik tombol memakai kuota API (hasil disimpan sementara di halaman, jadi klik ulang pada mahasiswa yang sama tidak memanggil AI lagi sampai halaman dimuat ulang).
+
 ## 2. Buat akun dummy
 
 Buat tiga akun demo melalui Supabase Auth menggunakan alamat berikut:

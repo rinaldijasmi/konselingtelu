@@ -28,7 +28,7 @@
     ? "–"
     : Number(value).toLocaleString("id-ID", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
-  const state = { rows: [], loaded: false, loading: false, selected: null, limit: PAGE_SIZE };
+  const state = { client: null, analyses: new Map(), rows: [], loaded: false, loading: false, selected: null, limit: PAGE_SIZE };
 
   const pdName = code => PD_LABELS[code] ? `${code} · ${PD_LABELS[code]}` : code;
   const hasReview = row => row.pd_status === "Perlu telaah profesional";
@@ -159,6 +159,50 @@
     return `<div class="pandu-scale ${flagged ? "flagged" : ""}"><span class="pandu-scale-name" title="${escapeHtml(label)}">${escapeHtml(label)}</span><span class="pandu-scale-track"><i style="width:${Math.max(0, Math.min(100, value))}%"></i></span><strong>${formatNumber(value)}</strong></div>`;
   }
 
+
+  const AI_SECTIONS = [
+    ["pertimbangan", "Hal yang perlu dipertimbangkan", "consider"],
+    ["mencolok", "Hal yang mencolok", "notable"],
+    ["risiko", "Risiko terbesar", "risk"],
+    ["kelebihan", "Kelebihan", "strength"],
+    ["potensi", "Potensi yang bisa dikembangkan", "potential"]
+  ];
+
+  function renderAnalysis(analysis, model) {
+    const validity = analysis.validitas || {};
+    const tone = validity.status === "Valid" ? "ok" : validity.status === "Tidak dapat dinilai" ? "alert" : "warn";
+    const list = items => `<ul>${(items || []).map(item => `<li>${escapeHtml(item)}</li>`).join("") || "<li>Tidak ada catatan.</li>"}</ul>`;
+    return `<div class="pandu-ai-heading"><h3>Analisis AI</h3><span>${escapeHtml(model || "")}</span></div>
+      <article class="pandu-ai-card validity ${tone}"><h4>Validitas hasil profiling <b>${escapeHtml(validity.status || "–")}</b></h4>${list(validity.poin)}</article>
+      <div class="pandu-ai-grid">${AI_SECTIONS.map(([key, title, kind]) => `<article class="pandu-ai-card ${kind}"><h4>${title}</h4>${list(analysis[key])}</article>`).join("")}</div>
+      <p class="report-confidential">Dihasilkan oleh AI dari skor tes (nama dan NIM tidak dikirim). Ini alat bantu skrining, bukan diagnosis; tetap perlu ditelaah psikolog.</p>`;
+  }
+
+  async function analyzeWithAi(row, button) {
+    const panel = $("#panduAiPanel");
+    panel.hidden = false;
+    if (state.analyses.has(row.nim)) {
+      const cached = state.analyses.get(row.nim);
+      panel.innerHTML = renderAnalysis(cached.analysis, cached.model);
+      return;
+    }
+    button.disabled = true;
+    panel.innerHTML = '<p class="pandu-ai-status">Menganalisis hasil profiling dengan AI… biasanya 10–20 detik.</p>';
+    const { data, error } = await state.client.functions.invoke("analyze-pandu", { body: { nim: row.nim } });
+    button.disabled = false;
+    if (state.selected !== row.nim) return;
+    let message = error ? "Analisis AI gagal. Coba lagi sebentar lagi." : data?.error;
+    if (error?.context?.json) {
+      try { message = (await error.context.json()).error || message; } catch { /* pakai pesan umum */ }
+    }
+    if (message || !data?.analysis) {
+      panel.innerHTML = `<p class="pandu-callout alert">${escapeHtml(message || "Analisis AI gagal.")}</p>`;
+      return;
+    }
+    state.analyses.set(row.nim, data);
+    panel.innerHTML = renderAnalysis(data.analysis, data.model);
+  }
+
   function scaleGroup(title, scales, labels = {}, note = "") {
     const entries = Object.entries(scales || {});
     if (!entries.length) return "";
@@ -170,8 +214,9 @@
     const incompleteNote = row.is_complete ? "" : `<p class="pandu-callout warn">Pengisian belum lengkap (${escapeHtml(row.fill_status.replace("Belum lengkap", "").trim() || "–")} butir). Skor skala validitas, normal, PD, dan faktor belum tersedia.</p>`;
     const reviewCallout = row.is_complete ? `<p class="pandu-callout ${hasReview(row) ? "alert" : "ok"}"><strong>${escapeHtml(row.pd_status || "Tidak tersedia")}</strong> · ${row.pd_flag_count ?? 0} skala PD ditandai${row.pd_top_scale ? ` · tertinggi ${escapeHtml(pdName(row.pd_top_scale))} (${formatNumber(row.pd_top_t)})` : ""}</p>` : "";
     $("#panduDetail").innerHTML = `
-      <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p><p>${[row.program_study, row.faculty, row.cohort ? `Angkatan ${row.cohort}` : ""].filter(Boolean).map(escapeHtml).join(" · ") || "Program studi belum tercatat"}</p></div>${row.is_complete ? '<button class="secondary-button" data-pandu-print type="button">Cetak hasil</button>' : ""}</div>
+      <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p><p>${[row.program_study, row.faculty, row.cohort ? `Angkatan ${row.cohort}` : ""].filter(Boolean).map(escapeHtml).join(" · ") || "Program studi belum tercatat"}</p></div>${row.is_complete ? '<div class="pandu-actions"><button class="secondary-button" data-pandu-print type="button">Cetak hasil</button><button class="primary-button" data-pandu-ai type="button">Analisis Hasil dengan AI</button></div>' : ""}</div>
       ${incompleteNote}${reviewCallout}
+      <section class="pandu-ai" id="panduAiPanel" hidden></section>
       <section class="pandu-group"><h3>Resiliensi</h3>
         <div class="pandu-resilience"><div><strong>${formatNumber(resilience)}</strong><span>Indeks (0–100) · ${escapeHtml(resilienceBand(resilience))}</span></div><div class="pandu-resilience-bar"><i style="width:${Math.max(0, Math.min(100, resilience ?? 0))}%"></i></div></div>
         <div class="counseling-session-meta"><span>Skor total: <b>${formatNumber(row.resilience_score, 0)}</b></span></div>
@@ -248,6 +293,7 @@
   }
 
   async function show(client) {
+    if (client) state.client = client;
     if (state.loaded || state.loading || !client) return;
     state.loading = true;
     $("#panduListCount").textContent = "Memuat data…";
@@ -289,9 +335,11 @@
   });
 
   $("#panduDetail").addEventListener("click", event => {
-    if (!event.target.closest("[data-pandu-print]")) return;
     const row = state.rows.find(item => item.nim === state.selected);
-    if (row) printReport(row);
+    if (!row) return;
+    if (event.target.closest("[data-pandu-print]")) printReport(row);
+    const aiButton = event.target.closest("[data-pandu-ai]");
+    if (aiButton) analyzeWithAi(row, aiButton);
   });
 
   window.panduProfiling = { show };

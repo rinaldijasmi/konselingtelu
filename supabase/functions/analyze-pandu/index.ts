@@ -24,6 +24,7 @@ Kamu menerima skor tes PANDU Tel-U (Personality, Adaptability, and Resilience Di
 Aturan:
 - Tulis dalam Bahasa Indonesia yang sederhana dan mudah dipahami admin non-psikolog. Hindari jargon; jika perlu istilah teknis, beri penjelasan singkat dalam kurung.
 - Ini hasil skrining, BUKAN diagnosis. Jangan memberi label diagnosis klinis. Gunakan bahasa hati-hati seperti "cenderung", "mengindikasikan", "perlu ditelaah".
+- Tulis nama skala persis seperti di data (misalnya "Conventionality (CO)", "Sensation-Seeking (SENS)"); jangan menerjemahkan atau mengubah artinya. Jelaskan maknanya dengan kata sederhana bila perlu.
 - Hanya gunakan data yang diberikan; jangan mengarang skor atau fakta lain. Sebut nama skala dan angkanya bila relevan.
 - Jika validitas diragukan, katakan dengan jelas dan batasi kesimpulan.
 - Setiap bagian berisi 2 sampai 5 poin ringkas (satu kalimat per poin, maksimal sekitar 30 kata).

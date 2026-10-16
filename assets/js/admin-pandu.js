@@ -62,10 +62,9 @@
     $("#panduIncompleteNote").textContent = `${(rows.length - complete.length).toLocaleString("id-ID")} belum lengkap`;
     $("#panduReview").textContent = review.length.toLocaleString("id-ID");
     $("#panduReviewRate").textContent = percent(review.length, complete.length);
-    const programs = new Set(rows.map(row => row.program_study).filter(Boolean));
-    const faculties = new Set(rows.map(row => row.faculty).filter(Boolean));
-    $("#panduPrograms").textContent = programs.size.toLocaleString("id-ID");
-    $("#panduFacultyNote").textContent = `${faculties.size.toLocaleString("id-ID")} fakultas`;
+    const indices = rows.map(row => row.resilience_index).filter(value => value !== null);
+    const average = indices.length ? indices.reduce((sum, value) => sum + value, 0) / indices.length : null;
+    $("#panduResilience").textContent = formatNumber(average);
 
     const topCounts = [...countBy(complete.filter(row => row.pd_top_scale), row => row.pd_top_scale)]
       .sort((left, right) => right[1] - left[1])
@@ -75,8 +74,9 @@
     const statusCounts = [...countBy(complete, row => row.pd_status || "Tidak tersedia")].sort((left, right) => right[1] - left[1]);
     $("#panduStatusChart").innerHTML = barMarkup(statusCounts, complete.length);
 
-    const facultyCounts = [...countBy(rows, row => row.faculty || "Belum diisi")].sort((left, right) => right[1] - left[1]);
-    $("#panduFacultyChart").innerHTML = barMarkup(facultyCounts, rows.length);
+    const bandOrder = ["Rendah (0–33)", "Sedang (34–66)", "Tinggi (67–100)", "Belum tersedia"];
+    const bandCounts = countBy(rows, row => resilienceBand(row.resilience_index));
+    $("#panduResilienceChart").innerHTML = barMarkup(bandOrder.filter(label => bandCounts.has(label)).map(label => [label, bandCounts.get(label)]), rows.length);
 
     const flagLabel = row => row.pd_flag_count >= 4 ? "4 skala atau lebih" : row.pd_flag_count === 0 ? "Tidak ada" : `${row.pd_flag_count} skala`;
     const flagOrder = ["Tidak ada", "1 skala", "2 skala", "3 skala", "4 skala atau lebih"];
@@ -91,6 +91,12 @@
     scaleFilter.value = current;
   }
 
+  const resilienceBand = index => {
+    if (index === null || index === undefined) return "Belum tersedia";
+    if (index < 34) return "Rendah (0–33)";
+    if (index < 67) return "Sedang (34–66)";
+    return "Tinggi (67–100)";
+  };
   const sortedUnique = (rows, key) => [...new Set(rows.map(row => row[key]).filter(Boolean))].sort((left, right) => left.localeCompare(right, "id"));
 
   function setOptions(select, placeholder, values) {
@@ -128,7 +134,9 @@
       (!cohort || row.cohort === cohort));
     const sorters = {
       name: (left, right) => left.full_name.localeCompare(right.full_name, "id"),
-      pd: (left, right) => (right.pd_top_t ?? -1) - (left.pd_top_t ?? -1)
+      pd: (left, right) => (right.pd_top_t ?? -1) - (left.pd_top_t ?? -1),
+      "resilience-low": (left, right) => (left.resilience_index ?? 101) - (right.resilience_index ?? 101),
+      "resilience-high": (left, right) => (right.resilience_index ?? -1) - (left.resilience_index ?? -1)
     };
     return rows.sort(sorters[$("#panduSort").value] || sorters.name);
   }
@@ -158,11 +166,16 @@
   }
 
   function renderDetail(row) {
+    const resilience = row.resilience_index;
     const incompleteNote = row.is_complete ? "" : `<p class="pandu-callout warn">Pengisian belum lengkap (${escapeHtml(row.fill_status.replace("Belum lengkap", "").trim() || "–")} butir). Skor skala validitas, normal, PD, dan faktor belum tersedia.</p>`;
     const reviewCallout = row.is_complete ? `<p class="pandu-callout ${hasReview(row) ? "alert" : "ok"}"><strong>${escapeHtml(row.pd_status || "Tidak tersedia")}</strong> · ${row.pd_flag_count ?? 0} skala PD ditandai${row.pd_top_scale ? ` · tertinggi ${escapeHtml(pdName(row.pd_top_scale))} (${formatNumber(row.pd_top_t)})` : ""}</p>` : "";
     $("#panduDetail").innerHTML = `
       <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p><p>${[row.program_study, row.faculty, row.cohort ? `Angkatan ${row.cohort}` : ""].filter(Boolean).map(escapeHtml).join(" · ") || "Program studi belum tercatat"}</p></div>${row.is_complete ? '<button class="secondary-button" data-pandu-print type="button">Cetak hasil</button>' : ""}</div>
       ${incompleteNote}${reviewCallout}
+      <section class="pandu-group"><h3>Resiliensi</h3>
+        <div class="pandu-resilience"><div><strong>${formatNumber(resilience)}</strong><span>Indeks (0–100) · ${escapeHtml(resilienceBand(resilience))}</span></div><div class="pandu-resilience-bar"><i style="width:${Math.max(0, Math.min(100, resilience ?? 0))}%"></i></div></div>
+        <div class="counseling-session-meta"><span>Skor total: <b>${formatNumber(row.resilience_score, 0)}</b></span></div>
+      </section>
       ${scaleGroup("Personality Disorder Scales (T-score)", row.pd_scales, PD_LABELS, `Batang merah menandai T ≥ ${THRESHOLD}; garis putus-putus berada di T = 70.`)}
       ${scaleGroup("Factor Scales (T-score)", row.factor_scales, FACTOR_LABELS)}
       ${scaleGroup("Validity Scales", row.validity, VALIDITY_LABELS)}

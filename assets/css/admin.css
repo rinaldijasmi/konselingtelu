@@ -427,6 +427,11 @@
       .pandu-group { margin-top: 16px; }
       .pandu-group h3 { margin: 0 0 8px; color: #5f5a5e; font-size: 10px; font-weight: 650; }
       .pandu-note { margin: -4px 0 8px; color: var(--muted); font-size: 8px; }
+      .pandu-resilience { display: grid; grid-template-columns: minmax(130px, auto) minmax(0, 1fr); align-items: center; gap: 14px; }
+      .pandu-resilience strong { display: block; font-size: 24px; letter-spacing: -.8px; }
+      .pandu-resilience span { color: var(--muted); font-size: 8px; }
+      .pandu-resilience-bar { height: 8px; overflow: hidden; border-radius: 5px; background: #f2eff0; }
+      .pandu-resilience-bar i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
       .pandu-scale-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 18px; }
       .pandu-scale { display: grid; grid-template-columns: minmax(70px, .9fr) minmax(0, 1.4fr) 38px; align-items: center; gap: 8px; font-size: 8px; }
       .pandu-scale-name { overflow: hidden; color: #625d61; text-overflow: ellipsis; white-space: nowrap; }
@@ -449,7 +454,7 @@
         .setting-panel { grid-row: 2; }
       }
       @media (max-width: 720px) {
-        .pandu-scale-grid { grid-template-columns: 1fr; }
+        .pandu-scale-grid, .pandu-resilience { grid-template-columns: 1fr; }
         .app-header { height: 60px; padding: 0 14px; }
         .header-brand { gap: 9px; }
         .header-brand img { width: 119px; }

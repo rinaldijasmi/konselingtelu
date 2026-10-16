@@ -104,6 +104,8 @@ def main():
             "pd_flag_count": int(float(row[header["Jumlah PD ≥70"]])) if header["Jumlah PD ≥70"] in row else None,
             "pd_top_scale": row.get(header["Skala PD Tertinggi"]),
             "pd_top_t": number(row.get(header["T-score PD Tertinggi"])),
+            "resilience_score": number(row.get(header["Skor Resiliensi"])),
+            "resilience_index": number(row.get(header["Indeks Resiliensi (0-100)"])),
             "pd_status": row.get(header["Status PD"]),
         }
         for key, scales in groups.items():
@@ -126,16 +128,17 @@ def main():
 insert into public.pandu_results (
   nim, full_name, program_study, faculty, cohort, fill_status, answered_items, total_items, is_complete,
   validity, normal_scales, pd_scales, factor_scales,
-  pd_flag_count, pd_top_scale, pd_top_t, pd_status
+  pd_flag_count, pd_top_scale, pd_top_t, pd_status, resilience_score, resilience_index
 )
 select
   nim, full_name, program_study, faculty, cohort, fill_status, answered_items, total_items, is_complete,
   validity, normal_scales, pd_scales, factor_scales,
-  pd_flag_count, pd_top_scale, pd_top_t, pd_status
+  pd_flag_count, pd_top_scale, pd_top_t, pd_status, resilience_score, resilience_index
 from jsonb_to_recordset($pandu${payload}$pandu$::jsonb) as x(
   nim text, full_name text, program_study text, faculty text, cohort text, fill_status text, answered_items integer, total_items integer, is_complete boolean,
   validity jsonb, normal_scales jsonb, pd_scales jsonb, factor_scales jsonb,
-  pd_flag_count integer, pd_top_scale text, pd_top_t numeric, pd_status text
+  pd_flag_count integer, pd_top_scale text, pd_top_t numeric, pd_status text,
+  resilience_score numeric, resilience_index numeric
 )
 on conflict (nim) do update set
   full_name = excluded.full_name, program_study = excluded.program_study,
@@ -145,7 +148,8 @@ on conflict (nim) do update set
   normal_scales = excluded.normal_scales, pd_scales = excluded.pd_scales,
   factor_scales = excluded.factor_scales, pd_flag_count = excluded.pd_flag_count,
   pd_top_scale = excluded.pd_top_scale, pd_top_t = excluded.pd_top_t,
-  pd_status = excluded.pd_status, imported_at = now();
+  pd_status = excluded.pd_status, resilience_score = excluded.resilience_score,
+  resilience_index = excluded.resilience_index, imported_at = now();
 """
         target = OUT_DIR / f"pandu-import-{number_:02d}.sql"
         target.write_text(sql, encoding="utf-8")

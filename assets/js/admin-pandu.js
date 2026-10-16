@@ -175,7 +175,7 @@
     return `<div class="pandu-ai-heading"><h3>Analisis AI</h3><span>${escapeHtml(model || "")}</span></div>
       <article class="pandu-ai-card validity ${tone}"><h4>Validitas hasil profiling <b>${escapeHtml(validity.status || "–")}</b></h4>${list(validity.poin)}</article>
       <div class="pandu-ai-grid">${AI_SECTIONS.map(([key, title, kind]) => `<article class="pandu-ai-card ${kind}"><h4>${title}</h4>${list(analysis[key])}</article>`).join("")}</div>
-      <p class="report-confidential">Dihasilkan oleh AI dari skor tes (nama dan NIM tidak dikirim). Ini alat bantu skrining, bukan diagnosis; tetap perlu ditelaah psikolog.</p>`;
+      <p class="report-confidential">Dihasilkan oleh AI dari skor tes PANDU TEL-U. Ini alat bantu skrining, bukan diagnosis; tetap perlu ditelaah psikolog.</p>`;
   }
 
   async function analyzeWithAi(row, button) {

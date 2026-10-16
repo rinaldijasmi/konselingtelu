@@ -420,6 +420,31 @@
       .toast { position: fixed; z-index: 20; right: 20px; bottom: 20px; display: flex; max-width: min(370px, calc(100vw - 40px)); align-items: center; gap: 9px; padding: 12px 14px; transform: translateY(12px); border: 1px solid #dceee2; border-radius: 8px; background: white; box-shadow: 0 10px 27px rgb(40 30 32 / 12%); color: #436c50; font-size: 10px; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
       .toast.show { transform: translateY(0); opacity: 1; }
       .toast svg { width: 16px; height: 16px; flex: none; }
+      .pandu-distribution { margin-bottom: 14px; }
+      .pandu-more { width: 100%; margin-top: 9px; }
+      #panduDetail { position: sticky; top: 82px; max-height: calc(100vh - 100px); overflow-y: auto; }
+      @media (max-width: 1040px) { #panduDetail { position: static; max-height: none; } }
+      .pandu-group { margin-top: 16px; }
+      .pandu-group h3 { margin: 0 0 8px; color: #5f5a5e; font-size: 10px; font-weight: 650; }
+      .pandu-note { margin: -4px 0 8px; color: var(--muted); font-size: 8px; }
+      .pandu-scale-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 18px; }
+      .pandu-scale { display: grid; grid-template-columns: minmax(70px, .9fr) minmax(0, 1.4fr) 38px; align-items: center; gap: 8px; font-size: 8px; }
+      .pandu-scale-name { overflow: hidden; color: #625d61; text-overflow: ellipsis; white-space: nowrap; }
+      .pandu-scale-track { position: relative; height: 6px; border-radius: 4px; background: #f2eff0; }
+      .pandu-scale-track::after { position: absolute; top: -2px; bottom: -2px; left: 70%; border-left: 1px dashed #c9c3c6; content: ""; }
+      .pandu-scale-track i { display: block; height: 100%; border-radius: inherit; background: #6b86bb; }
+      .pandu-scale.flagged .pandu-scale-track i { background: var(--red); }
+      .pandu-scale strong { text-align: right; font-size: 8px; font-weight: 650; }
+      .pandu-scale.flagged strong { color: var(--red); }
+      .pandu-callout { margin: 12px 0 0; padding: 9px 10px; border-radius: 6px; font-size: 9px; line-height: 1.55; }
+      .pandu-callout.alert { background: var(--red-soft); color: #8d1f31; }
+      .pandu-callout.ok { background: var(--green-soft); color: var(--green); }
+      .pandu-callout.warn { background: var(--gold-soft); color: #8a6414; }
+      .pandu-resilience { display: grid; grid-template-columns: minmax(130px, auto) minmax(0, 1fr); align-items: center; gap: 14px; }
+      .pandu-resilience strong { display: block; font-size: 24px; letter-spacing: -.8px; }
+      .pandu-resilience span { color: var(--muted); font-size: 8px; }
+      .pandu-resilience-bar { height: 8px; overflow: hidden; border-radius: 5px; background: #f2eff0; }
+      .pandu-resilience-bar i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
 
       @media (max-width: 1040px) {
         .app-layout { grid-template-columns: 190px minmax(0, 1fr); }
@@ -429,6 +454,7 @@
         .setting-panel { grid-row: 2; }
       }
       @media (max-width: 720px) {
+        .pandu-scale-grid, .pandu-resilience { grid-template-columns: 1fr; }
         .app-header { height: 60px; padding: 0 14px; }
         .header-brand { gap: 9px; }
         .header-brand img { width: 119px; }

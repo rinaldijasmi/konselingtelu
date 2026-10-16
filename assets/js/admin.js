@@ -2019,7 +2019,8 @@
           applications: ["applicationsView", "Pengajuan masuk"],
           counselors: ["counselorsView", "Manajemen konselor"],
           admins: ["adminsView", "Admin & akun"],
-          reports: ["reportsView", "Laporan Konseling"]
+          reports: ["reportsView", "Laporan Konseling"],
+          pandu: ["panduView", "Profiling PANDU"]
         };
         if (view === "admins" && adminContext?.profile.role !== "superadmin") return;
         state.view = view;
@@ -2031,6 +2032,7 @@
           if (active) button.setAttribute("aria-current", "page");
           else button.removeAttribute("aria-current");
         });
+        if (view === "pandu") window.panduProfiling?.show(adminContext?.client);
       }
 
       async function saveSettings() {

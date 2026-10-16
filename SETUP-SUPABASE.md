@@ -123,6 +123,15 @@ where profile.id = auth_user.id
 
 Superadmin masuk melalui halaman admin yang sama. Di **Bagian konselor**, form superadmin membuat akun admin atau konselor langsung tanpa undangan email. Setiap akun mendapat kata sandi sementara yang unik, dibuat acak di server, dan ditampilkan sekali setelah pembuatan. Kata sandi tidak disimpan atau ditampilkan kembali di daftar akun; daftar hanya menampilkan role, status akun, dan apakah pengguna sudah mengganti kata sandi. Pengguna wajib menggantinya saat login pertama; sebelum itu, akun belum dapat mengakses data layanan. Bagikan kata sandi sementara melalui jalur aman. Role superadmin tidak dapat dibuat dari form tersebut; gunakan SQL Editor untuk menetapkannya setelah verifikasi. Deploy `create-staff`, `create-counselor`, dan `complete-staff-setup` sesuai perintah di atas.
 
+### Profiling PANDU Tel-U (menu admin)
+
+Menu **Profiling PANDU** menampilkan hasil tes Personality, Adaptability, and Resilience Diagnostic. Data ini sangat sensitif: hanya admin/superadmin yang bisa membacanya (RLS) dan browser tidak punya akses tulis.
+
+1. Jalankan [`supabase/pandu-profiling.sql`](./supabase/pandu-profiling.sql) di SQL Editor untuk membuat tabel `pandu_results`.
+2. Buat SQL impor dari Excel di komputer sendiri: `python3 scripts/build-pandu-import.py "/path/pandu mahasiswa.xlsx"`. Hasilnya `supabase/private/pandu-import-part-1..3.sql` (diabaikan Git; **jangan di-commit**, berisi nama dan NIM asli).
+3. Jalankan tiap file bagian itu berurutan di SQL Editor. Aman diulang karena memakai upsert per NIM; baris ganda untuk NIM yang sama hanya dimasukkan sekali.
+4. Untuk menghapus seluruh data: `truncate public.pandu_results;`
+
 ## 2. Buat akun dummy
 
 Buat tiga akun demo melalui Supabase Auth menggunakan alamat berikut:

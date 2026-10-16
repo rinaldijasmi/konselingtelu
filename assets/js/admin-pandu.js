@@ -1,0 +1,271 @@
+(() => {
+  const PD_LABELS = {
+    PAR: "Paranoid", SCH: "Schizoid", SCT: "Schizotypal", ANT: "Antisocial", BOR: "Borderline",
+    HIS: "Histrionic", NAR: "Narcissistic", AVD: "Avoidant", DEP: "Dependent", OBC: "Obsessive-Compulsive"
+  };
+  const FACTOR_LABELS = {
+    AGRE: "Agreeableness", CONC: "Conscientiousness", EXTR: "Extraversion", NARC: "Narcissism",
+    NEUR: "Neuroticism", OPEN: "Openness", SENS: "Sensation-Seeking"
+  };
+  const VALIDITY_LABELS = { VRIN: "VRIN", CD: "Current Distress" };
+  const NORMAL_LABELS = {
+    AE: "Aestheticism", AM: "Ambition", AN: "Anxiety", AS: "Assertiveness", CO: "Conventionality",
+    DE: "Depression", DU: "Dutifulness", EC: "Excitement", EH: "Exhibitionism", EN: "Energy",
+    FL: "Flexibility", HS: "Hostility", IM: "Impulsiveness", IT: "Intellect", IR: "Irritability",
+    MD: "Modesty", MO: "Moodiness", OR: "Orderliness", SI: "Self-Indulgence", SN: "Sincerity",
+    SO: "Sociability", SR: "Self-Reliance", TO: "Tolerance", TR: "Trustfulness", WR: "Warmth"
+  };
+  const withCode = (labels, code) => labels[code] && labels[code] !== code ? `${labels[code]} (${code})` : code;
+  const THRESHOLD = 70;
+  const PAGE_SIZE = 100;
+  const MISSING_TABLE_CODES = ["42P01", "PGRST205"];
+
+  const $ = selector => document.querySelector(selector);
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
+  const formatNumber = (value, digits = 1) => value === null || value === undefined
+    ? "–"
+    : Number(value).toLocaleString("id-ID", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+  const state = { rows: [], loaded: false, loading: false, selected: null, limit: PAGE_SIZE };
+
+  const pdName = code => PD_LABELS[code] ? `${code} · ${PD_LABELS[code]}` : code;
+  const hasReview = row => row.pd_status === "Perlu telaah profesional";
+  const resilienceBand = index => {
+    if (index === null || index === undefined) return "Belum tersedia";
+    if (index < 34) return "Rendah (0–33)";
+    if (index < 67) return "Sedang (34–66)";
+    return "Tinggi (67–100)";
+  };
+
+  const countBy = (rows, labelFor) => {
+    const counts = new Map();
+    rows.forEach(row => {
+      const label = labelFor(row);
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return counts;
+  };
+
+  function barMarkup(entries, total) {
+    if (!entries.length) return '<div class="review-empty">Belum ada data.</div>';
+    return entries.map(([label, count], index) => {
+      const percent = total ? Math.round(count / total * 100) : 0;
+      return `<div class="bar-item"><div class="bar-label-row"><span>${escapeHtml(label)}</span><strong>${count.toLocaleString("id-ID")} · ${percent}%</strong></div><div class="bar-track"><div class="bar-fill ${index ? `alt-${Math.min(index, 4)}` : ""}" style="width:${percent}%"></div></div></div>`;
+    }).join("");
+  }
+
+  function renderSummary() {
+    const rows = state.rows;
+    const complete = rows.filter(row => row.is_complete);
+    const review = complete.filter(hasReview);
+    const indices = rows.map(row => row.resilience_index).filter(value => value !== null);
+    const average = indices.length ? indices.reduce((sum, value) => sum + value, 0) / indices.length : null;
+    const percent = (part, whole) => whole ? `${Math.round(part / whole * 100)}%` : "";
+
+    $("#panduTotal").textContent = rows.length.toLocaleString("id-ID");
+    $("#panduComplete").textContent = complete.length.toLocaleString("id-ID");
+    $("#panduCompleteRate").textContent = percent(complete.length, rows.length);
+    $("#panduIncompleteNote").textContent = `${(rows.length - complete.length).toLocaleString("id-ID")} belum lengkap`;
+    $("#panduReview").textContent = review.length.toLocaleString("id-ID");
+    $("#panduReviewRate").textContent = percent(review.length, complete.length);
+    $("#panduResilience").textContent = formatNumber(average);
+
+    const topCounts = [...countBy(complete.filter(row => row.pd_top_scale), row => row.pd_top_scale)]
+      .sort((left, right) => right[1] - left[1])
+      .map(([code, count]) => [pdName(code), count]);
+    $("#panduTopChart").innerHTML = barMarkup(topCounts, complete.length);
+
+    const statusCounts = [...countBy(complete, row => row.pd_status || "Tidak tersedia")].sort((left, right) => right[1] - left[1]);
+    $("#panduStatusChart").innerHTML = barMarkup(statusCounts, complete.length);
+
+    const bandOrder = ["Rendah (0–33)", "Sedang (34–66)", "Tinggi (67–100)", "Belum tersedia"];
+    const bandCounts = countBy(rows, row => resilienceBand(row.resilience_index));
+    $("#panduResilienceChart").innerHTML = barMarkup(bandOrder.filter(label => bandCounts.has(label)).map(label => [label, bandCounts.get(label)]), rows.length);
+
+    const flagLabel = row => row.pd_flag_count >= 4 ? "4 skala atau lebih" : row.pd_flag_count === 0 ? "Tidak ada" : `${row.pd_flag_count} skala`;
+    const flagOrder = ["Tidak ada", "1 skala", "2 skala", "3 skala", "4 skala atau lebih"];
+    const flagCounts = countBy(complete.filter(row => row.pd_flag_count !== null), flagLabel);
+    $("#panduFlagChart").innerHTML = barMarkup(flagOrder.filter(label => flagCounts.has(label)).map(label => [label, flagCounts.get(label)]), complete.length);
+
+    const scaleFilter = $("#panduScaleFilter");
+    const current = scaleFilter.value;
+    scaleFilter.innerHTML = '<option value="">Semua skala</option>' + Object.keys(PD_LABELS)
+      .map(code => `<option value="${code}">${escapeHtml(pdName(code))}</option>`).join("");
+    scaleFilter.value = current;
+  }
+
+  function filteredRows() {
+    const query = $("#panduSearch").value.trim().toLowerCase();
+    const fill = $("#panduFillFilter").value;
+    const status = $("#panduStatusFilter").value;
+    const scale = $("#panduScaleFilter").value;
+    const rows = state.rows.filter(row =>
+      (!query || row.full_name.toLowerCase().includes(query) || row.nim.includes(query)) &&
+      (!fill || (fill === "complete") === row.is_complete) &&
+      (!status || (status === "review" ? hasReview(row) : row.pd_status === "Tidak ada flag")) &&
+      (!scale || row.pd_top_scale === scale));
+    const sorters = {
+      name: (left, right) => left.full_name.localeCompare(right.full_name, "id"),
+      pd: (left, right) => (right.pd_top_t ?? -1) - (left.pd_top_t ?? -1),
+      "resilience-low": (left, right) => (left.resilience_index ?? 101) - (right.resilience_index ?? 101),
+      "resilience-high": (left, right) => (right.resilience_index ?? -1) - (left.resilience_index ?? -1)
+    };
+    return rows.sort(sorters[$("#panduSort").value] || sorters.name);
+  }
+
+  function renderList() {
+    const rows = filteredRows();
+    const visible = rows.slice(0, state.limit);
+    $("#panduListCount").textContent = `${rows.length.toLocaleString("id-ID")} dari ${state.rows.length.toLocaleString("id-ID")} mahasiswa`;
+    $("#panduList").innerHTML = visible.length ? visible.map(row => {
+      const badge = !row.is_complete
+        ? '<span class="status-badge">Belum lengkap</span>'
+        : hasReview(row) ? '<span class="status-badge confirmed">Perlu telaah</span>' : '<span class="status-badge done">Tidak ada flag</span>';
+      return `<button class="report-student ${state.selected === row.nim ? "active" : ""}" data-pandu-nim="${escapeHtml(row.nim)}" type="button"><strong>${escapeHtml(row.full_name)}</strong><span>${escapeHtml(row.nim)}${row.pd_top_scale ? ` · ${escapeHtml(row.pd_top_scale)} ${formatNumber(row.pd_top_t)}` : ""}</span>${badge}</button>`;
+    }).join("") : '<div class="review-empty">Tidak ada mahasiswa yang cocok dengan filter.</div>';
+    $("#panduMore").hidden = rows.length <= state.limit;
+  }
+
+  function scaleRow(code, value, label) {
+    const flagged = value >= THRESHOLD;
+    return `<div class="pandu-scale ${flagged ? "flagged" : ""}"><span class="pandu-scale-name" title="${escapeHtml(label)}">${escapeHtml(label)}</span><span class="pandu-scale-track"><i style="width:${Math.max(0, Math.min(100, value))}%"></i></span><strong>${formatNumber(value)}</strong></div>`;
+  }
+
+  function scaleGroup(title, scales, labels = {}, note = "") {
+    const entries = Object.entries(scales || {});
+    if (!entries.length) return "";
+    return `<section class="pandu-group"><h3>${escapeHtml(title)}</h3>${note ? `<p class="pandu-note">${escapeHtml(note)}</p>` : ""}<div class="pandu-scale-grid">${entries.map(([code, value]) => scaleRow(code, value, withCode(labels, code))).join("")}</div></section>`;
+  }
+
+  function renderDetail(row) {
+    const resilience = row.resilience_index;
+    const resilienceItems = Object.entries(row.resilience_items || {}).map(([item, value]) => `<span>${escapeHtml(item)}: <b>${value ?? "–"}</b></span>`).join("");
+    const incompleteNote = row.is_complete ? "" : `<p class="pandu-callout warn">Pengisian belum lengkap (${escapeHtml(row.fill_status.replace("Belum lengkap", "").trim() || "–")} butir). Skor skala validitas, normal, PD, dan faktor belum tersedia.</p>`;
+    const reviewCallout = row.is_complete ? `<p class="pandu-callout ${hasReview(row) ? "alert" : "ok"}"><strong>${escapeHtml(row.pd_status || "Tidak tersedia")}</strong> · ${row.pd_flag_count ?? 0} skala PD ditandai${row.pd_top_scale ? ` · tertinggi ${escapeHtml(pdName(row.pd_top_scale))} (${formatNumber(row.pd_top_t)})` : ""}</p>` : "";
+    $("#panduDetail").innerHTML = `
+      <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p></div>${row.is_complete ? '<button class="secondary-button" data-pandu-print type="button">Cetak hasil</button>' : ""}</div>
+      ${incompleteNote}${reviewCallout}
+      <section class="pandu-group"><h3>Resiliensi</h3>
+        <div class="pandu-resilience"><div><strong>${formatNumber(resilience)}</strong><span>Indeks (0–100) · ${escapeHtml(resilienceBand(resilience))}</span></div><div class="pandu-resilience-bar"><i style="width:${Math.max(0, Math.min(100, resilience ?? 0))}%"></i></div></div>
+        <div class="counseling-session-meta"><span>Skor total: <b>${formatNumber(row.resilience_score, 0)}</b></span>${resilienceItems ? `<span>Butir reverse (sudah dibalik):</span>${resilienceItems}` : ""}</div>
+      </section>
+      ${scaleGroup("Personality Disorder Scales (T-score)", row.pd_scales, PD_LABELS, `Batang merah menandai T ≥ ${THRESHOLD}; garis putus-putus berada di T = 70.`)}
+      ${scaleGroup("Factor Scales (T-score)", row.factor_scales, FACTOR_LABELS)}
+      ${scaleGroup("Validity Scales", row.validity, VALIDITY_LABELS)}
+      ${scaleGroup("Normal Scales (T-score)", row.normal_scales, NORMAL_LABELS)}
+      <p class="report-confidential">Data profiling bersifat rahasia. Hasil skrining ini bukan diagnosis dan perlu ditelaah oleh psikolog sebelum dipakai untuk tindak lanjut.</p>`;
+  }
+
+  function printReport(row) {
+    const rowsFor = (scales, labels) => Object.entries(scales || {})
+      .map(([code, value]) => `<tr><td>${escapeHtml(withCode(labels, code))}</td><td class="v">${formatNumber(value, 2)}</td></tr>`).join("");
+    const table = (title, scales, labels) => Object.keys(scales || {}).length
+      ? `<h3>${title}</h3><div class="sub">Scale</div><table>${rowsFor(scales, labels)}</table>` : "";
+    const logo = new URL("assets/telkom-university-logo.png", document.baseURI).href;
+    const printed = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+    const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Hasil PANDU - ${escapeHtml(row.full_name)}</title><style>
+      @page { size: A4; margin: 14mm 16mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; color: #111; font: 10.5px/1.35 Calibri, Carlito, Arial, sans-serif; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 2px solid #c41230; }
+      header img { height: 42px; }
+      header .org { text-align: right; font-size: 11px; font-weight: 700; line-height: 1.3; }
+      header .org span { display: block; color: #555; font-size: 9px; font-weight: 400; }
+      h1 { margin: 12px 0 8px; font-size: 13px; text-align: center; letter-spacing: .3px; }
+      .id td { padding: 1px 0; border: 0; font-size: 11.5px; }
+      .id td:first-child { width: 120px; } .id td:nth-child(2) { width: 14px; } .id td:last-child { font-weight: 700; }
+      .cols { display: grid; grid-template-columns: 1fr 14px 1fr; margin-top: 12px; }
+      .bar { background: #8b8b8b; }
+      h3 { margin: 10px 0 0; font-size: 11px; } h3:first-child { margin-top: 0; }
+      .sub { font-weight: 700; margin-top: 2px; }
+      table { width: 100%; border-collapse: collapse; }
+      .cols td { padding: 1px 0; border-bottom: 1px solid #222; font-size: 10.5px; }
+      td.v { width: 44px; text-align: right; font-weight: 700; }
+      .col-left { padding-right: 18px; } .col-right { padding-left: 18px; }
+      .conclusion { display: grid; grid-template-columns: 110px 10px 1fr; gap: 6px; margin-top: 16px; }
+      .conclusion .box { min-height: 74px; border: 1px solid #222; }
+      .conclusion small { display: block; font-weight: 400; }
+      footer { margin-top: 10px; color: #666; font-size: 8px; }
+    </style></head><body>
+      <header><img src="${logo}" alt="Telkom University"><div class="org">Direktorat Kemahasiswaan, Karier dan Alumni<span>Telkom University · Profiling PANDU</span></div></header>
+      <h1>HASIL PROFILING PANDU TEL-U</h1>
+      <table class="id"><tr><td>NIM</td><td>:</td><td>${escapeHtml(row.nim)}</td></tr><tr><td>Nama Lengkap</td><td>:</td><td>${escapeHtml(row.full_name)}</td></tr><tr><td>Tanggal Cetak</td><td>:</td><td>${printed}</td></tr></table>
+      <div class="cols">
+        <div class="col-left">${table("Validity scales", row.validity, VALIDITY_LABELS)}<div style="height:12px"></div>${table("Normal scales", row.normal_scales, NORMAL_LABELS)}</div>
+        <div class="bar"></div>
+        <div class="col-right">${table("Personality Disorder scales", row.pd_scales, PD_LABELS)}<div style="height:12px"></div>${table("Factor scales", row.factor_scales, FACTOR_LABELS)}</div>
+      </div>
+      <div class="conclusion"><div><strong>Kesimpulan</strong><small>(diisi oleh Profesional)</small></div><div>:</div><div class="box"></div></div>
+      <footer>Dokumen rahasia. Hasil skrining ini bukan diagnosis dan perlu ditelaah oleh profesional.</footer>
+    </body></html>`;
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    document.body.append(frame);
+    frame.srcdoc = html;
+    frame.onload = () => {
+      const image = frame.contentDocument.querySelector("img");
+      const go = () => { frame.contentWindow.focus(); frame.contentWindow.print(); };
+      if (image.complete) go(); else image.onload = image.onerror = go;
+      frame.contentWindow.onafterprint = () => frame.remove();
+    };
+  }
+
+  async function fetchAll(client) {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await client.from("pandu_results").select("*").order("full_name").range(from, from + 999);
+      if (error) return { error };
+      rows.push(...data);
+      if (data.length < 1000) return { rows };
+    }
+  }
+
+  async function show(client) {
+    if (state.loaded || state.loading || !client) return;
+    state.loading = true;
+    $("#panduListCount").textContent = "Memuat data…";
+    const { rows, error } = await fetchAll(client);
+    state.loading = false;
+    if (error) {
+      const missing = MISSING_TABLE_CODES.includes(error.code);
+      $("#panduMigrationNotice").hidden = !missing;
+      $("#panduListCount").textContent = missing ? "Tabel belum tersedia." : `Data gagal dimuat: ${error.message}`;
+      return;
+    }
+    state.rows = rows;
+    state.loaded = true;
+    $("#panduMigrationNotice").hidden = true;
+    renderSummary();
+    renderList();
+    if (!rows.length) $("#panduListCount").textContent = "Belum ada data. Impor hasil PANDU sesuai SETUP-SUPABASE.md.";
+  }
+
+  const resetLimitAndRender = () => { state.limit = PAGE_SIZE; renderList(); };
+  ["#panduSearch"].forEach(selector => $(selector).addEventListener("input", resetLimitAndRender));
+  ["#panduFillFilter", "#panduStatusFilter", "#panduScaleFilter", "#panduSort"].forEach(selector => $(selector).addEventListener("change", resetLimitAndRender));
+  $("#panduResetFilters").addEventListener("click", () => {
+    $("#panduSearch").value = "";
+    ["#panduFillFilter", "#panduStatusFilter", "#panduScaleFilter"].forEach(selector => { $(selector).value = ""; });
+    $("#panduSort").value = "name";
+    resetLimitAndRender();
+  });
+  $("#panduMore").addEventListener("click", () => { state.limit += PAGE_SIZE; renderList(); });
+  $("#panduList").addEventListener("click", event => {
+    const button = event.target.closest("[data-pandu-nim]");
+    if (!button) return;
+    state.selected = button.dataset.panduNim;
+    const row = state.rows.find(item => item.nim === state.selected);
+    if (row) renderDetail(row);
+    renderList();
+  });
+
+  $("#panduDetail").addEventListener("click", event => {
+    if (!event.target.closest("[data-pandu-print]")) return;
+    const row = state.rows.find(item => item.nim === state.selected);
+    if (row) printReport(row);
+  });
+
+  window.panduProfiling = { show };
+})();

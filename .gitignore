@@ -3,3 +3,4 @@ assets/supabase-config.js
 .env.local
 supabase/.temp/
 .DS_Store
+supabase/private/

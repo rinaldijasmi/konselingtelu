@@ -37,6 +37,7 @@
           <button class="nav-button" data-view="counselors" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0m3-12a3 3 0 0 1 0 5.8m1.5 2.6a5 5 0 0 1 2.5 3.6"/></svg><span>Manajemen konselor</span></button>
           <button class="nav-button" data-view="admins" data-superadmin-only hidden type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin & akun</span></button>
           <button class="nav-button" data-view="reports" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h9l4 4v14H5V3h1Zm8 0v5h5M8 12h8M8 16h8"/></svg><span>Laporan Konseling</span></button>
+          <button class="nav-button" data-view="pandu" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/></svg><span>Profiling PANDU</span></button>
         </nav>
         <div class="sidebar-bottom"><strong id="accessRoleLabel">Akses administrator</strong><span id="accessRoleDescription">Data ditampilkan sesuai role admin akun yang sedang masuk.</span></div>
       </aside>
@@ -218,6 +219,38 @@
               <section class="panel report-detail" id="reportDetail" aria-live="polite"><div class="review-empty">Pilih mahasiswa untuk melihat riwayat konseling.</div></section>
             </div>
           </section>
+          <section id="panduView" hidden>
+            <div class="heading-row"><div><h1>Profiling PANDU Tel-U</h1><p class="heading-subtitle">Hasil tes Personality, Adaptability, and Resilience Diagnostic for Telkom University Students. Status penapisan mengikuti hasil di file tes; batang merah menandai T-score ≥ 70.</p></div></div>
+            <p class="directory-migration-notice" id="panduMigrationNotice" role="status" hidden>Tabel hasil PANDU belum tersedia. Jalankan <code>supabase/pandu-profiling.sql</code>, lalu impor data dengan <code>scripts/build-pandu-import.py</code> sesuai <code>SETUP-SUPABASE.md</code>.</p>
+            <div class="summary-grid">
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Mahasiswa terprofil</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="panduTotal">0</strong></div><div class="metric-note">Peserta unik berdasarkan NIM</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Pengisian lengkap</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="panduComplete">0</strong><span class="metric-change" id="panduCompleteRate"></span></div><div class="metric-note" id="panduIncompleteNote"></div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Perlu telaah profesional</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 4 3 20h18L12 4Zm0 6v4m0 3h.01"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="panduReview">0</strong><span class="metric-change" id="panduReviewRate"></span></div><div class="metric-note">Dari pengisian lengkap</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Rata-rata indeks resiliensi</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 17 9 12l4 3 7-8"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="panduResilience">0</strong><span class="metric-note">/ 100</span></div><div class="metric-note">Skala 0–100</div></article>
+            </div>
+            <div class="distribution-grid pandu-distribution">
+              <section class="panel distribution-panel" aria-labelledby="panduTopHeading"><div class="panel-heading"><div><h2 id="panduTopHeading">Skala PD tertinggi</h2><p>Skala Personality Disorder dengan T-score tertinggi per mahasiswa</p></div></div><div class="bar-list" id="panduTopChart"></div></section>
+              <section class="panel distribution-panel" aria-labelledby="panduStatusHeading"><div class="panel-heading"><div><h2 id="panduStatusHeading">Status PD</h2><p>Hasil penapisan pada pengisian lengkap</p></div></div><div class="bar-list" id="panduStatusChart"></div></section>
+              <section class="panel distribution-panel" aria-labelledby="panduResilienceHeading"><div class="panel-heading"><div><h2 id="panduResilienceHeading">Indeks resiliensi</h2><p>Pengelompokan indeks 0–100 untuk gambaran umum</p></div></div><div class="bar-list" id="panduResilienceChart"></div></section>
+              <section class="panel distribution-panel" aria-labelledby="panduFlagHeading"><div class="panel-heading"><div><h2 id="panduFlagHeading">Jumlah skala PD ditandai</h2><p>Sesuai kolom “Jumlah PD ≥70” pada file hasil tes</p></div></div><div class="bar-list" id="panduFlagChart"></div></section>
+            </div>
+            <div class="report-layout">
+              <section class="panel" aria-labelledby="panduListHeading">
+                <div class="panel-heading"><div><h2 id="panduListHeading">Hasil per mahasiswa</h2><p id="panduListCount">Pilih mahasiswa untuk melihat profil lengkap.</p></div></div>
+                <div class="report-filters" aria-label="Filter hasil PANDU">
+                  <div class="report-filter-field"><label for="panduFillFilter">Status pengisian</label><select id="panduFillFilter"><option value="">Semua</option><option value="complete">Lengkap</option><option value="incomplete">Belum lengkap</option></select></div>
+                  <div class="report-filter-field"><label for="panduStatusFilter">Status PD</label><select id="panduStatusFilter"><option value="">Semua</option><option value="review">Perlu telaah profesional</option><option value="clear">Tidak ada flag</option></select></div>
+                  <div class="report-filter-field"><label for="panduScaleFilter">Skala PD tertinggi</label><select id="panduScaleFilter"><option value="">Semua skala</option></select></div>
+                  <div class="report-filter-field"><label for="panduSort">Urutkan</label><select id="panduSort"><option value="name">Nama A–Z</option><option value="pd">T-score PD tertinggi</option><option value="resilience-low">Resiliensi terendah</option><option value="resilience-high">Resiliensi tertinggi</option></select></div>
+                  <button class="secondary-button" id="panduResetFilters" type="button">Reset filter</button>
+                </div>
+                <input class="report-search" id="panduSearch" type="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa berdasarkan nama atau NIM">
+                <div class="report-student-list" id="panduList"></div>
+                <button class="secondary-button pandu-more" id="panduMore" type="button" hidden>Tampilkan lebih banyak</button>
+              </section>
+              <section class="panel report-detail" id="panduDetail" aria-live="polite"><div class="review-empty">Pilih mahasiswa untuk melihat profil PANDU.</div></section>
+            </div>
+          </section>
         </div>
       </main>
     </div>
@@ -306,6 +339,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/supabase-config.js"></script>
     <script src="assets/supabase.js"></script>
+    <script src="assets/js/admin-pandu.js"></script>
     <script src="assets/js/admin.js"></script>
   </body>
 </html>

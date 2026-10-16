@@ -3,7 +3,7 @@
 
 Pemakaian: python3 scripts/build-pandu-import.py "/path/pandu mahasiswa.xlsx"
 
-Keluaran ditulis ke supabase/private/ yang diabaikan Git karena berisi data
+Keluaran ditulis ke supabase/private/ (pandu-import-00-clear.sql lalu pandu-import-01..NN.sql) yang diabaikan Git karena berisi data
 pribadi mahasiswa. Jangan pernah meng-commit hasilnya.
 """
 import json
@@ -14,7 +14,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-CHUNK = 250
+CHUNK = 800
 OUT_DIR = Path(__file__).resolve().parent.parent / "supabase" / "private"
 
 
@@ -32,16 +32,19 @@ def read_rows(path):
             "".join(node.text or "" for node in item.iter(NS + "t"))
             for item in ET.fromstring(archive.read("xl/sharedStrings.xml")).findall(NS + "si")
         ]
-        sheet = ET.fromstring(archive.read("xl/worksheets/sheet1.xml"))
-    rows = []
-    for row in sheet.find(NS + "sheetData").findall(NS + "row"):
-        cells = {}
-        for cell in row.findall(NS + "c"):
-            value = cell.find(NS + "v")
-            if value is None or value.text in (None, ""):
-                continue
-            cells[column_index(cell.get("r"))] = shared[int(value.text)] if cell.get("t") == "s" else value.text
-        rows.append(cells)
+        rows = []
+        with archive.open("xl/worksheets/sheet1.xml") as sheet:
+            for _, element in ET.iterparse(sheet):
+                if element.tag != NS + "row":
+                    continue
+                cells = {}
+                for cell in element.findall(NS + "c"):
+                    value = cell.find(NS + "v")
+                    if value is None or value.text in (None, ""):
+                        continue
+                    cells[column_index(cell.get("r"))] = shared[int(value.text)] if cell.get("t") == "s" else value.text
+                rows.append(cells)
+                element.clear()
     return rows
 
 
@@ -71,9 +74,13 @@ def main():
     }
 
     records = {}
+    duplicates = []
     for row in rows[2:]:
         nim = str(row.get(header["NIM / ID"], "")).strip()
-        if not nim or nim in records:
+        if not nim:
+            continue
+        if nim in records:
+            duplicates.append(nim)
             continue
         status = row.get(header["Status Pengisian"], "")
         progress = re.search(r"\((\d+)/(\d+)\)", status)
@@ -103,8 +110,10 @@ def main():
         records[nim] = record
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for old in OUT_DIR.glob("pandu-import-part-*.sql"):
+    for old in OUT_DIR.glob("pandu-import-*.sql"):
         old.unlink()
+    (OUT_DIR / "pandu-import-00-clear.sql").write_text(
+        "-- Kosongkan data PANDU lama sebelum mengimpor data baru.\ntruncate public.pandu_results;\n", encoding="utf-8")
     items = list(records.values())
     parts = [items[start:start + CHUNK] for start in range(0, len(items), CHUNK)]
     for number_, part in enumerate(parts, 1):
@@ -138,10 +147,10 @@ on conflict (nim) do update set
   resilience_score = excluded.resilience_score, resilience_index = excluded.resilience_index,
   imported_at = now();
 """
-        target = OUT_DIR / f"pandu-import-part-{number_}.sql"
+        target = OUT_DIR / f"pandu-import-{number_:02d}.sql"
         target.write_text(sql, encoding="utf-8")
         print(f"{target.name}: {len(part)} baris, {target.stat().st_size // 1024} KB")
-    print(f"Total {len(items)} mahasiswa unik dari {len(rows) - 2} baris Excel.")
+    print(f"Total {len(items)} mahasiswa unik dari {len(rows) - 2} baris Excel ({len(duplicates)} baris NIM ganda dilewati).")
 
 
 if __name__ == "__main__":

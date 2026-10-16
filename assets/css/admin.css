@@ -440,11 +440,6 @@
       .pandu-callout.alert { background: var(--red-soft); color: #8d1f31; }
       .pandu-callout.ok { background: var(--green-soft); color: var(--green); }
       .pandu-callout.warn { background: var(--gold-soft); color: #8a6414; }
-      .pandu-resilience { display: grid; grid-template-columns: minmax(130px, auto) minmax(0, 1fr); align-items: center; gap: 14px; }
-      .pandu-resilience strong { display: block; font-size: 24px; letter-spacing: -.8px; }
-      .pandu-resilience span { color: var(--muted); font-size: 8px; }
-      .pandu-resilience-bar { height: 8px; overflow: hidden; border-radius: 5px; background: #f2eff0; }
-      .pandu-resilience-bar i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
 
       @media (max-width: 1040px) {
         .app-layout { grid-template-columns: 190px minmax(0, 1fr); }
@@ -454,7 +449,7 @@
         .setting-panel { grid-row: 2; }
       }
       @media (max-width: 720px) {
-        .pandu-scale-grid, .pandu-resilience { grid-template-columns: 1fr; }
+        .pandu-scale-grid { grid-template-columns: 1fr; }
         .app-header { height: 60px; padding: 0 14px; }
         .header-brand { gap: 9px; }
         .header-brand img { width: 119px; }

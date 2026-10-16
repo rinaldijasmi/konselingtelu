@@ -5,6 +5,9 @@
 create table if not exists public.pandu_results (
   nim text primary key,
   full_name text not null,
+  program_study text,
+  faculty text,
+  cohort text,
   fill_status text not null,
   answered_items integer,
   total_items integer,
@@ -17,11 +20,16 @@ create table if not exists public.pandu_results (
   pd_top_scale text,
   pd_top_t numeric,
   pd_status text,
-  resilience_items jsonb not null default '{}'::jsonb,
-  resilience_score numeric,
-  resilience_index numeric,
   imported_at timestamptz not null default now()
 );
+
+-- Pembaruan untuk tabel yang sudah ada: tambah identitas akademik, hapus data resiliensi.
+alter table public.pandu_results add column if not exists program_study text;
+alter table public.pandu_results add column if not exists faculty text;
+alter table public.pandu_results add column if not exists cohort text;
+alter table public.pandu_results drop column if exists resilience_items;
+alter table public.pandu_results drop column if exists resilience_score;
+alter table public.pandu_results drop column if exists resilience_index;
 
 alter table public.pandu_results enable row level security;
 revoke all on public.pandu_results from anon, public;

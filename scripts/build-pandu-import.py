@@ -48,6 +48,11 @@ def read_rows(path):
     return rows
 
 
+def text(value):
+    value = (value or "").strip()
+    return None if not value or value.startswith("#") else value
+
+
 def number(value, digits=2):
     try:
         result = round(float(value), digits)
@@ -89,6 +94,9 @@ def main():
         record = {
             "nim": nim,
             "full_name": row.get(header["Nama"], "").strip(),
+            "program_study": text(row.get(header["Program Studi"])),
+            "faculty": text(row.get(header["Fakultas"])),
+            "cohort": text(row.get(header["Angkatan"])),
             "fill_status": status,
             "answered_items": int(progress.group(1)) if progress else None,
             "total_items": int(progress.group(2)) if progress else None,
@@ -97,12 +105,6 @@ def main():
             "pd_top_scale": row.get(header["Skala PD Tertinggi"]),
             "pd_top_t": number(row.get(header["T-score PD Tertinggi"])),
             "pd_status": row.get(header["Status PD"]),
-            "resilience_score": number(row.get(header["Skor Resiliensi"])),
-            "resilience_index": number(row.get(header["Indeks Resiliensi (0-100)"])),
-            "resilience_items": {
-                name.split()[0]: number(row.get(header[name]), 0)
-                for name in names if name and name.startswith("Q4")
-            },
         }
         for key, scales in groups.items():
             record[key] = {
@@ -122,32 +124,28 @@ def main():
         payload = json.dumps(part, ensure_ascii=False, separators=(",", ":"))
         sql = f"""-- Impor PANDU bagian {number_}/{len(parts)} ({len(part)} baris). Data pribadi: jangan di-commit.
 insert into public.pandu_results (
-  nim, full_name, fill_status, answered_items, total_items, is_complete,
+  nim, full_name, program_study, faculty, cohort, fill_status, answered_items, total_items, is_complete,
   validity, normal_scales, pd_scales, factor_scales,
-  pd_flag_count, pd_top_scale, pd_top_t, pd_status,
-  resilience_items, resilience_score, resilience_index
+  pd_flag_count, pd_top_scale, pd_top_t, pd_status
 )
 select
-  nim, full_name, fill_status, answered_items, total_items, is_complete,
+  nim, full_name, program_study, faculty, cohort, fill_status, answered_items, total_items, is_complete,
   validity, normal_scales, pd_scales, factor_scales,
-  pd_flag_count, pd_top_scale, pd_top_t, pd_status,
-  resilience_items, resilience_score, resilience_index
+  pd_flag_count, pd_top_scale, pd_top_t, pd_status
 from jsonb_to_recordset($pandu${payload}$pandu$::jsonb) as x(
-  nim text, full_name text, fill_status text, answered_items integer, total_items integer, is_complete boolean,
+  nim text, full_name text, program_study text, faculty text, cohort text, fill_status text, answered_items integer, total_items integer, is_complete boolean,
   validity jsonb, normal_scales jsonb, pd_scales jsonb, factor_scales jsonb,
-  pd_flag_count integer, pd_top_scale text, pd_top_t numeric, pd_status text,
-  resilience_items jsonb, resilience_score numeric, resilience_index numeric
+  pd_flag_count integer, pd_top_scale text, pd_top_t numeric, pd_status text
 )
 on conflict (nim) do update set
-  full_name = excluded.full_name, fill_status = excluded.fill_status,
+  full_name = excluded.full_name, program_study = excluded.program_study,
+  faculty = excluded.faculty, cohort = excluded.cohort, fill_status = excluded.fill_status,
   answered_items = excluded.answered_items, total_items = excluded.total_items,
   is_complete = excluded.is_complete, validity = excluded.validity,
   normal_scales = excluded.normal_scales, pd_scales = excluded.pd_scales,
   factor_scales = excluded.factor_scales, pd_flag_count = excluded.pd_flag_count,
   pd_top_scale = excluded.pd_top_scale, pd_top_t = excluded.pd_top_t,
-  pd_status = excluded.pd_status, resilience_items = excluded.resilience_items,
-  resilience_score = excluded.resilience_score, resilience_index = excluded.resilience_index,
-  imported_at = now();
+  pd_status = excluded.pd_status, imported_at = now();
 """
         target = OUT_DIR / f"pandu-import-{number_:02d}.sql"
         target.write_text(sql, encoding="utf-8")

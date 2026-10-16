@@ -127,7 +127,7 @@ Superadmin masuk melalui halaman admin yang sama. Di **Bagian konselor**, form s
 
 Menu **Profiling PANDU** menampilkan hasil tes Personality, Adaptability, and Resilience Diagnostic. Data ini sangat sensitif: hanya admin/superadmin yang bisa membacanya (RLS) dan browser tidak punya akses tulis.
 
-1. Jalankan [`supabase/pandu-profiling.sql`](./supabase/pandu-profiling.sql) di SQL Editor untuk membuat tabel `pandu_results`.
+1. Jalankan [`supabase/pandu-profiling.sql`](./supabase/pandu-profiling.sql) di SQL Editor untuk membuat tabel `pandu_results` (aman dijalankan ulang: menambah kolom program studi, fakultas, angkatan dan menghapus kolom resiliensi lama).
 2. Buat SQL impor dari Excel di komputer sendiri: `python3 scripts/build-pandu-import.py "/path/pandu mahasiswa.xlsx"`. Hasilnya `supabase/private/pandu-import-00-clear.sql` dan `pandu-import-01..NN.sql` (diabaikan Git; **jangan di-commit**, berisi nama dan NIM asli).
 3. Jalankan `pandu-import-00-clear.sql` (mengosongkan data lama; lewati jika ini impor pertama), lalu tiap file `pandu-import-01..NN.sql` berurutan di SQL Editor. Bagian bisa diulang karena memakai upsert per NIM; baris ganda untuk NIM yang sama hanya dimasukkan sekali.
 4. Untuk menghapus seluruh data: `truncate public.pandu_results;`

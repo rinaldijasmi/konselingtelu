@@ -32,12 +32,6 @@
 
   const pdName = code => PD_LABELS[code] ? `${code} · ${PD_LABELS[code]}` : code;
   const hasReview = row => row.pd_status === "Perlu telaah profesional";
-  const resilienceBand = index => {
-    if (index === null || index === undefined) return "Belum tersedia";
-    if (index < 34) return "Rendah (0–33)";
-    if (index < 67) return "Sedang (34–66)";
-    return "Tinggi (67–100)";
-  };
 
   const countBy = (rows, labelFor) => {
     const counts = new Map();
@@ -60,8 +54,6 @@
     const rows = state.rows;
     const complete = rows.filter(row => row.is_complete);
     const review = complete.filter(hasReview);
-    const indices = rows.map(row => row.resilience_index).filter(value => value !== null);
-    const average = indices.length ? indices.reduce((sum, value) => sum + value, 0) / indices.length : null;
     const percent = (part, whole) => whole ? `${Math.round(part / whole * 100)}%` : "";
 
     $("#panduTotal").textContent = rows.length.toLocaleString("id-ID");
@@ -70,7 +62,10 @@
     $("#panduIncompleteNote").textContent = `${(rows.length - complete.length).toLocaleString("id-ID")} belum lengkap`;
     $("#panduReview").textContent = review.length.toLocaleString("id-ID");
     $("#panduReviewRate").textContent = percent(review.length, complete.length);
-    $("#panduResilience").textContent = formatNumber(average);
+    const programs = new Set(rows.map(row => row.program_study).filter(Boolean));
+    const faculties = new Set(rows.map(row => row.faculty).filter(Boolean));
+    $("#panduPrograms").textContent = programs.size.toLocaleString("id-ID");
+    $("#panduFacultyNote").textContent = `${faculties.size.toLocaleString("id-ID")} fakultas`;
 
     const topCounts = [...countBy(complete.filter(row => row.pd_top_scale), row => row.pd_top_scale)]
       .sort((left, right) => right[1] - left[1])
@@ -80,15 +75,15 @@
     const statusCounts = [...countBy(complete, row => row.pd_status || "Tidak tersedia")].sort((left, right) => right[1] - left[1]);
     $("#panduStatusChart").innerHTML = barMarkup(statusCounts, complete.length);
 
-    const bandOrder = ["Rendah (0–33)", "Sedang (34–66)", "Tinggi (67–100)", "Belum tersedia"];
-    const bandCounts = countBy(rows, row => resilienceBand(row.resilience_index));
-    $("#panduResilienceChart").innerHTML = barMarkup(bandOrder.filter(label => bandCounts.has(label)).map(label => [label, bandCounts.get(label)]), rows.length);
+    const facultyCounts = [...countBy(rows, row => row.faculty || "Belum diisi")].sort((left, right) => right[1] - left[1]);
+    $("#panduFacultyChart").innerHTML = barMarkup(facultyCounts, rows.length);
 
     const flagLabel = row => row.pd_flag_count >= 4 ? "4 skala atau lebih" : row.pd_flag_count === 0 ? "Tidak ada" : `${row.pd_flag_count} skala`;
     const flagOrder = ["Tidak ada", "1 skala", "2 skala", "3 skala", "4 skala atau lebih"];
     const flagCounts = countBy(complete.filter(row => row.pd_flag_count !== null), flagLabel);
     $("#panduFlagChart").innerHTML = barMarkup(flagOrder.filter(label => flagCounts.has(label)).map(label => [label, flagCounts.get(label)]), complete.length);
 
+    fillFilterOptions();
     const scaleFilter = $("#panduScaleFilter");
     const current = scaleFilter.value;
     scaleFilter.innerHTML = '<option value="">Semua skala</option>' + Object.keys(PD_LABELS)
@@ -96,21 +91,44 @@
     scaleFilter.value = current;
   }
 
+  const sortedUnique = (rows, key) => [...new Set(rows.map(row => row[key]).filter(Boolean))].sort((left, right) => left.localeCompare(right, "id"));
+
+  function setOptions(select, placeholder, values) {
+    const current = select.value;
+    select.innerHTML = `<option value="">${placeholder}</option>` + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+    select.value = values.includes(current) ? current : "";
+  }
+
+  function fillFilterOptions() {
+    setOptions($("#panduFacultyFilter"), "Semua fakultas", sortedUnique(state.rows, "faculty"));
+    setOptions($("#panduCohortFilter"), "Semua angkatan", sortedUnique(state.rows, "cohort").reverse());
+    updateProgramOptions();
+  }
+
+  function updateProgramOptions() {
+    const faculty = $("#panduFacultyFilter").value;
+    setOptions($("#panduProgramFilter"), "Semua program studi", sortedUnique(faculty ? state.rows.filter(row => row.faculty === faculty) : state.rows, "program_study"));
+  }
+
   function filteredRows() {
     const query = $("#panduSearch").value.trim().toLowerCase();
     const fill = $("#panduFillFilter").value;
     const status = $("#panduStatusFilter").value;
     const scale = $("#panduScaleFilter").value;
+    const faculty = $("#panduFacultyFilter").value;
+    const program = $("#panduProgramFilter").value;
+    const cohort = $("#panduCohortFilter").value;
     const rows = state.rows.filter(row =>
       (!query || row.full_name.toLowerCase().includes(query) || row.nim.includes(query)) &&
       (!fill || (fill === "complete") === row.is_complete) &&
       (!status || (status === "review" ? hasReview(row) : row.pd_status === "Tidak ada flag")) &&
-      (!scale || row.pd_top_scale === scale));
+      (!scale || row.pd_top_scale === scale) &&
+      (!faculty || row.faculty === faculty) &&
+      (!program || row.program_study === program) &&
+      (!cohort || row.cohort === cohort));
     const sorters = {
       name: (left, right) => left.full_name.localeCompare(right.full_name, "id"),
-      pd: (left, right) => (right.pd_top_t ?? -1) - (left.pd_top_t ?? -1),
-      "resilience-low": (left, right) => (left.resilience_index ?? 101) - (right.resilience_index ?? 101),
-      "resilience-high": (left, right) => (right.resilience_index ?? -1) - (left.resilience_index ?? -1)
+      pd: (left, right) => (right.pd_top_t ?? -1) - (left.pd_top_t ?? -1)
     };
     return rows.sort(sorters[$("#panduSort").value] || sorters.name);
   }
@@ -123,7 +141,7 @@
       const badge = !row.is_complete
         ? '<span class="status-badge">Belum lengkap</span>'
         : hasReview(row) ? '<span class="status-badge confirmed">Perlu telaah</span>' : '<span class="status-badge done">Tidak ada flag</span>';
-      return `<button class="report-student ${state.selected === row.nim ? "active" : ""}" data-pandu-nim="${escapeHtml(row.nim)}" type="button"><strong>${escapeHtml(row.full_name)}</strong><span>${escapeHtml(row.nim)}${row.pd_top_scale ? ` · ${escapeHtml(row.pd_top_scale)} ${formatNumber(row.pd_top_t)}` : ""}</span>${badge}</button>`;
+      return `<button class="report-student ${state.selected === row.nim ? "active" : ""}" data-pandu-nim="${escapeHtml(row.nim)}" type="button"><strong>${escapeHtml(row.full_name)}</strong><span>${escapeHtml(row.nim)}${row.program_study ? ` · ${escapeHtml(row.program_study)}` : ""}${row.cohort ? ` · ${escapeHtml(row.cohort)}` : ""}${row.pd_top_scale ? ` · ${escapeHtml(row.pd_top_scale)} ${formatNumber(row.pd_top_t)}` : ""}</span>${badge}</button>`;
     }).join("") : '<div class="review-empty">Tidak ada mahasiswa yang cocok dengan filter.</div>';
     $("#panduMore").hidden = rows.length <= state.limit;
   }
@@ -140,17 +158,11 @@
   }
 
   function renderDetail(row) {
-    const resilience = row.resilience_index;
-    const resilienceItems = Object.entries(row.resilience_items || {}).map(([item, value]) => `<span>${escapeHtml(item)}: <b>${value ?? "–"}</b></span>`).join("");
     const incompleteNote = row.is_complete ? "" : `<p class="pandu-callout warn">Pengisian belum lengkap (${escapeHtml(row.fill_status.replace("Belum lengkap", "").trim() || "–")} butir). Skor skala validitas, normal, PD, dan faktor belum tersedia.</p>`;
     const reviewCallout = row.is_complete ? `<p class="pandu-callout ${hasReview(row) ? "alert" : "ok"}"><strong>${escapeHtml(row.pd_status || "Tidak tersedia")}</strong> · ${row.pd_flag_count ?? 0} skala PD ditandai${row.pd_top_scale ? ` · tertinggi ${escapeHtml(pdName(row.pd_top_scale))} (${formatNumber(row.pd_top_t)})` : ""}</p>` : "";
     $("#panduDetail").innerHTML = `
-      <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p></div>${row.is_complete ? '<button class="secondary-button" data-pandu-print type="button">Cetak hasil</button>' : ""}</div>
+      <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p><p>${[row.program_study, row.faculty, row.cohort ? `Angkatan ${row.cohort}` : ""].filter(Boolean).map(escapeHtml).join(" · ") || "Program studi belum tercatat"}</p></div>${row.is_complete ? '<button class="secondary-button" data-pandu-print type="button">Cetak hasil</button>' : ""}</div>
       ${incompleteNote}${reviewCallout}
-      <section class="pandu-group"><h3>Resiliensi</h3>
-        <div class="pandu-resilience"><div><strong>${formatNumber(resilience)}</strong><span>Indeks (0–100) · ${escapeHtml(resilienceBand(resilience))}</span></div><div class="pandu-resilience-bar"><i style="width:${Math.max(0, Math.min(100, resilience ?? 0))}%"></i></div></div>
-        <div class="counseling-session-meta"><span>Skor total: <b>${formatNumber(row.resilience_score, 0)}</b></span>${resilienceItems ? `<span>Butir reverse (sudah dibalik):</span>${resilienceItems}` : ""}</div>
-      </section>
       ${scaleGroup("Personality Disorder Scales (T-score)", row.pd_scales, PD_LABELS, `Batang merah menandai T ≥ ${THRESHOLD}; garis putus-putus berada di T = 70.`)}
       ${scaleGroup("Factor Scales (T-score)", row.factor_scales, FACTOR_LABELS)}
       ${scaleGroup("Validity Scales", row.validity, VALIDITY_LABELS)}
@@ -191,7 +203,7 @@
     </style></head><body>
       <header><img src="${logo}" alt="Telkom University"><div class="org">Direktorat Kemahasiswaan, Karier dan Alumni<span>Telkom University · Profiling PANDU</span></div></header>
       <h1>HASIL PROFILING PANDU TEL-U</h1>
-      <table class="id"><tr><td>NIM</td><td>:</td><td>${escapeHtml(row.nim)}</td></tr><tr><td>Nama Lengkap</td><td>:</td><td>${escapeHtml(row.full_name)}</td></tr><tr><td>Tanggal Cetak</td><td>:</td><td>${printed}</td></tr></table>
+      <table class="id"><tr><td>NIM</td><td>:</td><td>${escapeHtml(row.nim)}</td></tr><tr><td>Nama Lengkap</td><td>:</td><td>${escapeHtml(row.full_name)}</td></tr>${row.program_study ? `<tr><td>Program Studi</td><td>:</td><td>${escapeHtml(row.program_study)}</td></tr>` : ""}${row.faculty ? `<tr><td>Fakultas</td><td>:</td><td>${escapeHtml(row.faculty)}</td></tr>` : ""}${row.cohort ? `<tr><td>Angkatan</td><td>:</td><td>${escapeHtml(row.cohort)}</td></tr>` : ""}<tr><td>Tanggal Cetak</td><td>:</td><td>${printed}</td></tr></table>
       <div class="cols">
         <div class="col-left">${table("Validity scales", row.validity, VALIDITY_LABELS)}<div style="height:12px"></div>${table("Normal scales", row.normal_scales, NORMAL_LABELS)}</div>
         <div class="bar"></div>
@@ -244,10 +256,12 @@
 
   const resetLimitAndRender = () => { state.limit = PAGE_SIZE; renderList(); };
   ["#panduSearch"].forEach(selector => $(selector).addEventListener("input", resetLimitAndRender));
-  ["#panduFillFilter", "#panduStatusFilter", "#panduScaleFilter", "#panduSort"].forEach(selector => $(selector).addEventListener("change", resetLimitAndRender));
+  ["#panduFillFilter", "#panduStatusFilter", "#panduScaleFilter", "#panduCohortFilter", "#panduProgramFilter", "#panduSort"].forEach(selector => $(selector).addEventListener("change", resetLimitAndRender));
+  $("#panduFacultyFilter").addEventListener("change", () => { updateProgramOptions(); resetLimitAndRender(); });
   $("#panduResetFilters").addEventListener("click", () => {
     $("#panduSearch").value = "";
-    ["#panduFillFilter", "#panduStatusFilter", "#panduScaleFilter"].forEach(selector => { $(selector).value = ""; });
+    ["#panduFillFilter", "#panduStatusFilter", "#panduScaleFilter", "#panduFacultyFilter", "#panduProgramFilter", "#panduCohortFilter"].forEach(selector => { $(selector).value = ""; });
+    updateProgramOptions();
     $("#panduSort").value = "name";
     resetLimitAndRender();
   });

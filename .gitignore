@@ -4,3 +4,4 @@ assets/supabase-config.js
 supabase/.temp/
 .DS_Store
 supabase/private/
+__pycache__/

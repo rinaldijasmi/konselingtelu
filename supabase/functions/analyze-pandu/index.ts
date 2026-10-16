@@ -43,17 +43,19 @@ function cleanList(value: unknown) {
 }
 
 Deno.serve(async request => {
-  const allowedOrigin = Deno.env.get("APP_ORIGIN") ?? "http://localhost:8000";
+  const allowedOrigins = [Deno.env.get("APP_ORIGIN") ?? "http://localhost:8000", ...(Deno.env.get("APP_ORIGIN_EXTRA") ?? "").split(",")]
+    .map(value => value.trim())
+    .filter(Boolean);
   const origin = request.headers.get("Origin");
   const corsHeaders = {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     Vary: "Origin"
   };
   const fail = (error: string, status: number) => Response.json({ error }, { status, headers: corsHeaders });
 
-  if (origin && origin !== allowedOrigin) return fail("Origin is not allowed", 403);
+  if (origin && !allowedOrigins.includes(origin)) return fail("Origin is not allowed", 403);
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return fail("Method not allowed", 405);
 

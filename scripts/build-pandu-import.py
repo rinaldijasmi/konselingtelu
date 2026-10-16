@@ -81,7 +81,9 @@ def main():
             continue
         if nim in records:
             duplicates.append(nim)
-            continue
+            # Pilih pengisian lengkap; jika sama-sama lengkap, baris paling akhir di Excel menang.
+            if records[nim]["is_complete"] and status != "Lengkap":
+                continue
         status = row.get(header["Status Pengisian"], "")
         progress = re.search(r"\((\d+)/(\d+)\)", status)
         record = {

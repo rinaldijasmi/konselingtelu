@@ -50,6 +50,7 @@ test.describe("Alur konselor", () => {
     await expect(page.locator("#scheduleDetail")).toContainText("Hasil profiling PANDU Tel-U");
     await expect(page.locator("#scheduleDetail .pandu-box").first()).toContainText("Perlu telaah profesional", { timeout: 20_000 });
     await expect(page.locator("#scheduleDetail .pandu-box").first()).toContainText("Schizotypal");
+    await expect(page.locator("body")).not.toContainText("belum tersambung");
     expect(errors).toEqual([]);
   });
 });

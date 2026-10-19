@@ -86,6 +86,16 @@ export default async function globalSetup() {
   }).select("id").single();
   if (appointmentError) throw new Error(`Gagal membuat pengajuan uji: ${appointmentError.message}`);
 
+  // Sesi selesai tanpa laporan: halaman konselor tetap harus termuat.
+  const past = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
+  const { error: pastError } = await admin.from("appointments").insert({
+    student_id: accounts.student.id, counselor_id: accounts.counselor.id, requested_date: past,
+    requested_start_time: "10:00", requested_end_time: "11:00", scheduled_date: past, start_time: "10:00", end_time: "11:00",
+    location: "Ruang UAT", mode: "Tatap muka", status: "completed",
+    category: "Akademik", issue_summary: "UAT selesai tanpa laporan", reason: "UAT", issue_details: "UAT"
+  });
+  if (pastError) throw new Error(`Gagal membuat sesi selesai uji: ${pastError.message}`);
+
   // Disembunyikan segera agar tidak tampil ke mahasiswa sungguhan selama pengujian.
   await admin.from("counselor_directory").update({ is_listed: false }).eq("id", directory.id);
 

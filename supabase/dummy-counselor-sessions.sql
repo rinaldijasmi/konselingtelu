@@ -70,9 +70,15 @@ begin
       ) on conflict (code) do nothing;
     end loop;
   end loop;
+  insert into public.counseling_reports (appointment_id, counselor_id, diagnosis, description, intervention, conclusion, recommendation)
+  select a.id, v_counselor, 'Data simulasi: kesulitan mengelola waktu dan tekanan akademik.',
+    'Data simulasi untuk preview; bukan detail konseling asli.', 'Diskusi strategi pengelolaan waktu dan latihan relaksasi.',
+    'Mahasiswa menunjukkan perkembangan positif.', 'Tindak lanjut sesi berikutnya bila diperlukan.'
+  from public.appointments a where a.code like 'DUMMY-RANI-%' and a.status = 'completed'
+  on conflict (appointment_id) do nothing;
   alter table public.appointments enable trigger appointments_validate_slot;
 end $$;
 
 -- Menghapus data dummy ini:
--- delete from public.appointments where code like 'DUMMY-RANI-%';
+-- delete from public.appointments where code like 'DUMMY-RANI-%'; -- laporan ikut terhapus
 -- delete from public.guest_students where nim like 'DUMMY-PROF-%';

@@ -341,6 +341,7 @@
         return wrapper;
       }
 
+      const emptyReport = { diagnosis: "Laporan belum diisi.", description: "–", intervention: "–", conclusion: "–", recommendation: "–" };
       const panduCache = new Map();
       const omniCache = new Map();
 
@@ -459,7 +460,7 @@
 
       function reportHtml(session) {
         const student = getStudent(session);
-        const report = session.report;
+        const report = session.report || emptyReport;
         const fields = [
           ["Nama Mahasiswa", student.name],
           ["NIM Mahasiswa", student.nim],
@@ -523,9 +524,9 @@
         });
         card.append(cardHeading, meta);
         [
-          ["Diagnosis Kasus", session.report.diagnosis], ["Deskripsi Kasus", session.report.description],
-          ["Hasil Intervensi", session.report.intervention], ["Kesimpulan Hasil", session.report.conclusion],
-          ["Rekomendasi", session.report.recommendation]
+          ["Diagnosis Kasus", (session.report || emptyReport).diagnosis], ["Deskripsi Kasus", (session.report || emptyReport).description],
+          ["Hasil Intervensi", (session.report || emptyReport).intervention], ["Kesimpulan Hasil", (session.report || emptyReport).conclusion],
+          ["Rekomendasi", (session.report || emptyReport).recommendation]
         ].forEach(([label, value]) => {
           const titleNode = document.createElement("h3");
           titleNode.textContent = label;

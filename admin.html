@@ -37,6 +37,10 @@
           <button class="nav-button" data-view="counselors" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0m3-12a3 3 0 0 1 0 5.8m1.5 2.6a5 5 0 0 1 2.5 3.6"/></svg><span>Manajemen konselor</span></button>
           <button class="nav-button" data-view="admins" data-superadmin-only hidden type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin & akun</span></button>
           <button class="nav-button" data-view="reports" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h9l4 4v14H5V3h1Zm8 0v5h5M8 12h8M8 16h8"/></svg><span>Laporan Konseling</span></button>
+        </nav>
+        <hr class="side-divider">
+        <p class="side-label">Profiling</p>
+        <nav class="nav-list" aria-label="Menu profiling">
           <button class="nav-button" data-view="pandu" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/></svg><span>Profiling PANDU</span></button>
         </nav>
         <div class="sidebar-bottom"><strong id="accessRoleLabel">Akses administrator</strong><span id="accessRoleDescription">Data ditampilkan sesuai role admin akun yang sedang masuk.</span></div>
@@ -220,7 +224,7 @@
             </div>
           </section>
           <section id="panduView" hidden>
-            <div class="heading-row"><div><h1>Profiling PANDU Tel-U</h1><p class="heading-subtitle">Hasil tes Personality, Adaptability, and Resilience Diagnostic for Telkom University Students. Status penapisan mengikuti hasil di file tes; batang merah menandai T-score ≥ 70.</p></div></div>
+            <div class="heading-row"><div><h1>Profiling PANDU Tel-U</h1><p class="heading-subtitle">Hasil tes Personality, Adaptability, and Resilience Diagnostic for Telkom University Students. Status penapisan mengikuti hasil di file tes; batang merah menandai T-score ≥ 70.</p></div><button class="primary-button" id="panduAddButton" type="button">Tambah data profiling</button></div>
             <p class="directory-migration-notice" id="panduMigrationNotice" role="status" hidden>Tabel hasil PANDU belum tersedia. Jalankan <code>supabase/pandu-profiling.sql</code>, lalu impor data dengan <code>scripts/build-pandu-import.py</code> sesuai <code>SETUP-SUPABASE.md</code>.</p>
             <div class="summary-grid">
               <article class="metric-card"><div class="metric-top"><span class="metric-label">Mahasiswa terprofil</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="panduTotal">0</strong></div><div class="metric-note">Peserta unik berdasarkan NIM</div></article>
@@ -292,6 +296,19 @@
         </form>
       </section>
     </div>
+    <div class="approval-backdrop" id="panduImportBackdrop" hidden>
+      <section class="approval-modal pandu-import-modal" role="dialog" aria-modal="true" aria-labelledby="panduImportTitle">
+        <h2 id="panduImportTitle">Tambah data profiling</h2>
+        <p class="approval-intro">Unggah file Excel (.xlsx) atau CSV dengan format kolom yang sama seperti file PANDU sebelumnya. NIM yang sudah ada akan diperbarui, NIM baru akan ditambahkan.</p>
+        <div class="approval-fields">
+          <div class="approval-field"><label for="panduImportFile">File hasil PANDU</label><input id="panduImportFile" type="file" accept=".xlsx,.xls,.csv"></div>
+        </div>
+        <div class="pandu-import-summary" id="panduImportSummary" aria-live="polite"></div>
+        <p class="approval-message" id="panduImportMessage" role="alert"></p>
+        <div class="approval-actions"><button class="secondary-button" id="panduImportCancel" type="button">Tutup</button><button class="primary-button" id="panduImportConfirm" type="button" disabled>Simpan data</button></div>
+      </section>
+    </div>
+
     <div class="approval-backdrop" id="addSessionBackdrop" hidden>
       <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="addSessionTitle">
         <h2 id="addSessionTitle">Tambah sesi konseling</h2>
@@ -342,6 +359,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/supabase-config.js"></script>
     <script src="assets/supabase.js"></script>
+    <script src="assets/js/pandu-labels.js"></script>
     <script src="assets/js/admin-pandu.js"></script>
     <script src="assets/js/admin.js"></script>
   </body>

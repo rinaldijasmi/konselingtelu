@@ -441,6 +441,12 @@
       .pandu-scale.flagged .pandu-scale-track i { background: var(--red); }
       .pandu-scale strong { text-align: right; font-size: 8px; font-weight: 650; }
       .pandu-scale.flagged strong { color: var(--red); }
+      .pandu-import-summary { margin-top: 12px; font-size: 9px; line-height: 1.6; }
+      .pandu-import-summary:empty { display: none; }
+      .pandu-import-summary ul { margin: 6px 0 0; padding-left: 16px; }
+      .pandu-import-summary .ok { color: var(--green); }
+      .pandu-import-summary .warn { color: #a26500; }
+      .pandu-import-modal { width: min(100%, 560px); }
       .pandu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
       .pandu-ai { margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
       .pandu-ai-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }

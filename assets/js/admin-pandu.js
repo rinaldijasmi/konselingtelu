@@ -1,20 +1,5 @@
 (() => {
-  const PD_LABELS = {
-    PAR: "Paranoid", SCH: "Schizoid", SCT: "Schizotypal", ANT: "Antisocial", BOR: "Borderline",
-    HIS: "Histrionic", NAR: "Narcissistic", AVD: "Avoidant", DEP: "Dependent", OBC: "Obsessive-Compulsive"
-  };
-  const FACTOR_LABELS = {
-    AGRE: "Agreeableness", CONC: "Conscientiousness", EXTR: "Extraversion", NARC: "Narcissism",
-    NEUR: "Neuroticism", OPEN: "Openness", SENS: "Sensation-Seeking"
-  };
-  const VALIDITY_LABELS = { VRIN: "VRIN", CD: "Current Distress" };
-  const NORMAL_LABELS = {
-    AE: "Aestheticism", AM: "Ambition", AN: "Anxiety", AS: "Assertiveness", CO: "Conventionality",
-    DE: "Depression", DU: "Dutifulness", EC: "Excitement", EH: "Exhibitionism", EN: "Energy",
-    FL: "Flexibility", HS: "Hostility", IM: "Impulsiveness", IT: "Intellect", IR: "Irritability",
-    MD: "Modesty", MO: "Moodiness", OR: "Orderliness", SI: "Self-Indulgence", SN: "Sincerity",
-    SO: "Sociability", SR: "Self-Reliance", TO: "Tolerance", TR: "Trustfulness", WR: "Warmth"
-  };
+  const { PD_LABELS, FACTOR_LABELS, VALIDITY_LABELS, NORMAL_LABELS } = window.PANDU_LABELS;
   const withCode = (labels, code) => labels[code] && labels[code] !== code ? `${labels[code]} (${code})` : code;
   const THRESHOLD = 70;
   const PAGE_SIZE = 100;
@@ -312,6 +297,163 @@
     renderList();
     if (!rows.length) $("#panduListCount").textContent = "Belum ada data. Impor hasil PANDU sesuai SETUP-SUPABASE.md.";
   }
+
+
+  const XLSX_URL = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+  const IMPORT_CHUNK = 300;
+  const importState = { records: [], skipped: 0, busy: false };
+
+  function loadSheetLibrary() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = XLSX_URL;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Pustaka pembaca Excel gagal dimuat. Periksa koneksi internet."));
+      document.head.append(script);
+    });
+  }
+
+  const cellText = value => value === null || value === undefined ? "" : String(value).trim();
+  const optionalText = value => { const text = cellText(value); return text && !text.startsWith("#") ? text : null; };
+  const cellNumber = (value, digits = 2) => {
+    const parsed = Number.parseFloat(String(value ?? "").replace(",", "."));
+    if (!Number.isFinite(parsed)) return null;
+    return digits === 0 ? Math.round(parsed) : Number(parsed.toFixed(digits));
+  };
+
+  // Format kolom sama dengan Excel PANDU: baris judul kolom memuat "NIM / ID".
+  function parseRecords(matrix) {
+    const headerRow = matrix.findIndex(row => row.some(cell => cellText(cell) === "NIM / ID"));
+    if (headerRow < 0) throw new Error('Kolom "NIM / ID" tidak ditemukan. Pastikan format file sama dengan file PANDU.');
+    const header = new Map();
+    matrix[headerRow].forEach((cell, index) => { const name = cellText(cell); if (name && !header.has(name)) header.set(name, index); });
+    const required = ["NIM / ID", "Nama", "Status Pengisian", "VRIN", "CD", "AE", "WR", "PAR", "OBC", "AGRE", "SENS"];
+    const missing = required.filter(name => !header.has(name));
+    if (missing.length) throw new Error(`Kolom wajib tidak ditemukan: ${missing.join(", ")}.`);
+    const names = [...header.keys()];
+    const span = (first, last) => names.filter(name => header.get(name) >= header.get(first) && header.get(name) <= header.get(last));
+    const groups = { validity: span("VRIN", "CD"), normal_scales: span("AE", "WR"), pd_scales: span("PAR", "OBC"), factor_scales: span("AGRE", "SENS") };
+    const get = (row, name) => header.has(name) ? row[header.get(name)] : undefined;
+
+    const records = new Map();
+    let skipped = 0;
+    for (const row of matrix.slice(headerRow + 1)) {
+      const nim = cellText(get(row, "NIM / ID"));
+      const name = cellText(get(row, "Nama"));
+      if (!nim || !name) { skipped += 1; continue; }
+      const status = cellText(get(row, "Status Pengisian"));
+      const isComplete = status === "Lengkap";
+      if (records.get(nim)?.is_complete && !isComplete) continue;
+      const progress = status.match(/\((\d+)\/(\d+)\)/);
+      const record = {
+        nim, full_name: name,
+        program_study: optionalText(get(row, "Program Studi")),
+        faculty: optionalText(get(row, "Fakultas")),
+        cohort: optionalText(get(row, "Angkatan")),
+        fill_status: status || "Tidak diketahui",
+        answered_items: progress ? Number(progress[1]) : null,
+        total_items: progress ? Number(progress[2]) : null,
+        is_complete: isComplete,
+        pd_flag_count: cellNumber(get(row, "Jumlah PD ≥70"), 0),
+        pd_top_scale: optionalText(get(row, "Skala PD Tertinggi")),
+        pd_top_t: cellNumber(get(row, "T-score PD Tertinggi")),
+        pd_status: optionalText(get(row, "Status PD")),
+        resilience_score: cellNumber(get(row, "Skor Resiliensi")),
+        resilience_index: cellNumber(get(row, "Indeks Resiliensi (0-100)"))
+      };
+      for (const [key, scales] of Object.entries(groups)) {
+        record[key] = Object.fromEntries(scales
+          .map(scale => [scale, cellNumber(get(row, scale))])
+          .filter(([, value]) => value !== null));
+      }
+      records.set(nim, record);
+    }
+    return { records: [...records.values()], skipped };
+  }
+
+  function openImport() {
+    importState.records = [];
+    $("#panduImportFile").value = "";
+    $("#panduImportSummary").innerHTML = "";
+    $("#panduImportMessage").textContent = "";
+    $("#panduImportConfirm").disabled = true;
+    $("#panduImportBackdrop").hidden = false;
+  }
+
+  const closeImport = () => { if (!importState.busy) $("#panduImportBackdrop").hidden = true; };
+
+  async function readImportFile(file) {
+    const message = $("#panduImportMessage");
+    const summary = $("#panduImportSummary");
+    importState.records = [];
+    $("#panduImportConfirm").disabled = true;
+    message.textContent = "";
+    summary.innerHTML = "";
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { message.textContent = "File terlalu besar (maksimal 20 MB). Pecah menjadi beberapa file."; return; }
+    summary.textContent = "Membaca file…";
+    try {
+      await loadSheetLibrary();
+      const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const matrix = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+      const { records, skipped } = parseRecords(matrix);
+      if (!records.length) throw new Error("Tidak ada baris data yang valid di file.");
+      const known = new Set(state.rows.map(row => row.nim));
+      const updated = records.filter(record => known.has(record.nim)).length;
+      const incomplete = records.filter(record => !record.is_complete).length;
+      importState.records = records;
+      summary.innerHTML = `<strong class="ok">${records.length.toLocaleString("id-ID")} mahasiswa siap disimpan</strong>
+        <ul><li>${(records.length - updated).toLocaleString("id-ID")} NIM baru, ${updated.toLocaleString("id-ID")} NIM diperbarui</li>
+        ${incomplete ? `<li class="warn">${incomplete.toLocaleString("id-ID")} pengisian belum lengkap (skor belum tersedia)</li>` : ""}
+        ${skipped ? `<li class="warn">${skipped.toLocaleString("id-ID")} baris tanpa NIM/nama dilewati</li>` : ""}</ul>`;
+      $("#panduImportConfirm").disabled = false;
+    } catch (error) {
+      summary.innerHTML = "";
+      message.textContent = error.message || "File tidak dapat dibaca.";
+    }
+  }
+
+  async function saveImport() {
+    const message = $("#panduImportMessage");
+    const button = $("#panduImportConfirm");
+    if (!importState.records.length || importState.busy) return;
+    importState.busy = true;
+    button.disabled = true;
+    message.textContent = "";
+    try {
+      for (let start = 0; start < importState.records.length; start += IMPORT_CHUNK) {
+        button.textContent = `Menyimpan ${Math.min(start + IMPORT_CHUNK, importState.records.length)}/${importState.records.length}…`;
+        const { error } = await state.client.rpc("admin_upsert_pandu_results", { p_rows: importState.records.slice(start, start + IMPORT_CHUNK) });
+        if (error) throw error;
+      }
+      const total = importState.records.length;
+      importState.records = [];
+      importState.busy = false;
+      $("#panduImportBackdrop").hidden = true;
+      state.analyses.clear();
+      state.loaded = false;
+      await show(state.client);
+      $("#toastMessage").textContent = `${total.toLocaleString("id-ID")} data profiling berhasil disimpan.`;
+      $("#toast").classList.add("show");
+      setTimeout(() => $("#toast").classList.remove("show"), 3500);
+    } catch (error) {
+      message.textContent = MISSING_TABLE_CODES.includes(error?.code) || error?.code === "PGRST202"
+        ? "Fungsi impor belum tersedia. Jalankan supabase/pandu-input-counselor-access.sql."
+        : `Gagal menyimpan: ${error?.message || "kesalahan tidak diketahui"}`;
+      button.disabled = false;
+    } finally {
+      importState.busy = false;
+      button.textContent = "Simpan data";
+    }
+  }
+
+  $("#panduAddButton").addEventListener("click", openImport);
+  $("#panduImportCancel").addEventListener("click", closeImport);
+  $("#panduImportBackdrop").addEventListener("click", event => { if (event.target.id === "panduImportBackdrop") closeImport(); });
+  $("#panduImportFile").addEventListener("change", event => readImportFile(event.target.files[0]));
+  $("#panduImportConfirm").addEventListener("click", saveImport);
 
   const resetLimitAndRender = () => { state.limit = PAGE_SIZE; renderList(); };
   ["#panduSearch"].forEach(selector => $(selector).addEventListener("input", resetLimitAndRender));

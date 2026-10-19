@@ -132,6 +132,13 @@ Menu **Profiling PANDU** menampilkan hasil tes Personality, Adaptability, and Re
 3. Jalankan `pandu-import-00-clear.sql` (mengosongkan data lama; lewati jika ini impor pertama), lalu tiap file `pandu-import-01..NN.sql` berurutan di SQL Editor. Bagian bisa diulang karena memakai upsert per NIM; baris ganda untuk NIM yang sama hanya dimasukkan sekali.
 4. Untuk menghapus seluruh data: `truncate public.pandu_results;`
 
+#### Tambah data profiling & akses konselor
+
+Jalankan [`supabase/pandu-input-counselor-access.sql`](./supabase/pandu-input-counselor-access.sql) sekali di SQL Editor. File ini membuat dua fungsi:
+
+- `admin_upsert_pandu_results`: dipakai tombol **Tambah data profiling** (menu **Profiling → Profiling PANDU**). Admin mengunggah Excel/CSV berformat sama dengan file PANDU; NIM baru ditambahkan, NIM yang sudah ada diperbarui, dan hasil lengkap tidak tertimpa data yang belum lengkap.
+- `counselor_pandu_result`: dipakai halaman konselor. Konselor hanya bisa melihat hasil profiling mahasiswa yang punya pengajuan/sesi dengan dirinya (NIM harus ada di data profiling).
+
 #### Analisis AI (tombol "Analisis Hasil dengan AI")
 
 Tombol ini memanggil Edge Function `analyze-pandu`, yang membaca skor dari database lalu meminta analisis ke OpenAI (ChatGPT). Hanya admin/superadmin aktif yang bisa memakainya. Nama dan NIM tidak dikirim ke OpenAI. API key hanya tersimpan sebagai secret Supabase, bukan di Git atau browser.

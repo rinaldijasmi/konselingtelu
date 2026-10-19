@@ -341,6 +341,56 @@
         return wrapper;
       }
 
+      const panduCache = new Map();
+
+      function panduScaleList(scales, labels) {
+        const entries = Object.entries(scales || {});
+        if (!entries.length) return "";
+        return `<div class="pandu-scales">${entries.map(([code, value]) => {
+          const high = value >= 70;
+          const name = labels[code] && labels[code] !== code ? `${labels[code]} (${code})` : code;
+          return `<div class="pandu-scale ${high ? "high" : ""}"><span>${escapeHtml(name)}</span><div class="pandu-track"><i style="width:${Math.max(0, Math.min(100, value))}%"></i></div><b>${Number(value).toLocaleString("id-ID", { maximumFractionDigits: 1 })}</b></div>`;
+        }).join("")}</div>`;
+      }
+
+      function panduHtml(result) {
+        const { PD_LABELS, FACTOR_LABELS, VALIDITY_LABELS, NORMAL_LABELS } = window.PANDU_LABELS;
+        if (!result.is_complete) {
+          return `<p class="pandu-note warn">Mahasiswa ini sudah mengisi tes PANDU tetapi belum lengkap (${escapeHtml(result.fill_status || "")}). Skor belum tersedia.</p>`;
+        }
+        const review = result.pd_status === "Perlu telaah profesional";
+        const resilience = result.resilience_index;
+        return `<p class="pandu-note ${review ? "alert" : "ok"}"><strong>${escapeHtml(result.pd_status || "Tidak tersedia")}</strong> · ${result.pd_flag_count ?? 0} skala PD ditandai${result.pd_top_scale ? ` · tertinggi ${escapeHtml(PD_LABELS[result.pd_top_scale] || result.pd_top_scale)} (T ${Number(result.pd_top_t).toLocaleString("id-ID", { maximumFractionDigits: 1 })})` : ""}</p>
+          ${resilience === null || resilience === undefined ? "" : `<div class="pandu-scale"><span>Indeks resiliensi (0–100)</span><div class="pandu-track resilience"><i style="width:${Math.max(0, Math.min(100, resilience))}%"></i></div><b>${Number(resilience).toLocaleString("id-ID", { maximumFractionDigits: 1 })}</b></div>`}
+          <h4>Personality Disorder Scales (T-score)</h4>${panduScaleList(result.pd_scales, PD_LABELS)}
+          <h4>Factor Scales (T-score)</h4>${panduScaleList(result.factor_scales, FACTOR_LABELS)}
+          <details><summary>Validity &amp; Normal Scales</summary><h4>Validity Scales</h4>${panduScaleList(result.validity, VALIDITY_LABELS)}<h4>Normal Scales (T-score)</h4>${panduScaleList(result.normal_scales, NORMAL_LABELS)}</details>
+          <p class="pandu-note">Batang merah menandai T-score ≥ 70. Hasil skrining ini bukan diagnosis dan perlu ditelaah profesional.</p>`;
+      }
+
+      async function renderPanduSection(detail, student) {
+        const title = document.createElement("h3");
+        title.className = "section-title";
+        title.textContent = "Hasil profiling PANDU Tel-U";
+        const box = document.createElement("div");
+        box.className = "pandu-box";
+        box.innerHTML = '<p class="pandu-note">Memeriksa data profiling…</p>';
+        detail.append(title, box);
+        if (!student.nim) { box.innerHTML = '<p class="pandu-note">NIM mahasiswa tidak tersedia.</p>'; return; }
+        try {
+          if (!panduCache.has(student.nim)) {
+            const { data, error } = await window.counselingBackend.getClient().rpc("counselor_pandu_result", { p_nim: student.nim });
+            if (error) throw error;
+            panduCache.set(student.nim, data);
+          }
+          if (!box.isConnected) return;
+          const result = panduCache.get(student.nim);
+          box.innerHTML = result ? panduHtml(result) : '<p class="pandu-note">Belum ada hasil profiling PANDU untuk NIM ini.</p>';
+        } catch (error) {
+          if (box.isConnected) box.innerHTML = '<p class="pandu-note">Hasil profiling belum dapat dimuat. Pastikan fungsi database terbaru sudah dijalankan.</p>';
+        }
+      }
+
       function renderScheduleDetail(session) {
         const detail = $("#scheduleDetail");
         detail.replaceChildren();
@@ -385,6 +435,7 @@
           ["Alasan konseling", session.reason, true], ["Detail masalah", session.details, true]
         ].forEach(([label, value, wide]) => sessionFields.append(field(label, value, wide)));
         detail.append(sessionFields);
+        renderPanduSection(detail, student);
         const privacy = document.createElement("p");
         privacy.className = "private-note";
         privacy.textContent = "Informasi mahasiswa bersifat rahasia. Gunakan hanya untuk pelayanan konseling dan pengisian laporan sesi.";

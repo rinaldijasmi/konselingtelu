@@ -97,6 +97,22 @@
       .field span { display: block; margin-bottom: 4px; color: #989397; font-size: 7px; }
       .field strong { display: block; overflow-wrap: anywhere; color: #4f4a4e; font-size: 8px; font-weight: 600; line-height: 1.5; }
       .field a { color: #526c9b; font-size: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+      .pandu-box h4 { margin: 12px 0 6px; color: #514d50; font-size: 8px; font-weight: 700; }
+      .pandu-note { margin: 0 0 8px; padding: 8px 9px; border-radius: 6px; background: #fbf6f6; color: #766d71; font-size: 8px; line-height: 1.55; }
+      .pandu-note.alert { background: #fdecef; color: #8d1f31; }
+      .pandu-note.ok { background: #eef8f1; color: #1f7a45; }
+      .pandu-note.warn { background: #fff7e6; color: #8a5a00; }
+      .pandu-scales { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 16px; }
+      .pandu-scale { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 30px; align-items: center; gap: 7px; font-size: 8px; }
+      .pandu-scale span { overflow: hidden; color: #4f4a4e; text-overflow: ellipsis; white-space: nowrap; }
+      .pandu-scale b { text-align: right; font-size: 8px; }
+      .pandu-track { height: 6px; overflow: hidden; border-radius: 4px; background: #f2eff0; }
+      .pandu-track i { display: block; height: 100%; border-radius: inherit; background: #8e8a8d; }
+      .pandu-track.resilience i { background: #1f7a45; }
+      .pandu-scale.high .pandu-track i { background: #c41230; }
+      .pandu-box details { margin: 8px 0; }
+      .pandu-box summary { cursor: pointer; color: #526c9b; font-size: 8px; font-weight: 650; }
+      @media (max-width: 760px) { .pandu-scales { grid-template-columns: 1fr; } }
       .private-note, .preview-note { margin: 11px 0 0; padding: 9px; border-radius: 6px; background: #fbf6f6; color: #766d71; font-size: 8px; line-height: 1.55; }
       .primary-button { display: inline-flex; min-height: 35px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--red); color: white; font-size: 9px; font-weight: 650; }
       .primary-button:hover { background: var(--red-dark); }

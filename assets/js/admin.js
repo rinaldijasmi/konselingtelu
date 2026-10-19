@@ -2020,7 +2020,8 @@
           counselors: ["counselorsView", "Manajemen konselor"],
           admins: ["adminsView", "Admin & akun"],
           reports: ["reportsView", "Laporan Konseling"],
-          pandu: ["panduView", "Profiling PANDU"]
+          pandu: ["panduView", "Profiling PANDU"],
+          omni: ["omniView", "Profiling OMNI"]
         };
         if (view === "admins" && adminContext?.profile.role !== "superadmin") return;
         state.view = view;
@@ -2033,6 +2034,7 @@
           else button.removeAttribute("aria-current");
         });
         if (view === "pandu") window.panduProfiling?.show(adminContext?.client);
+        if (view === "omni") window.omniProfiling?.show(adminContext?.client);
       }
 
       async function saveSettings() {

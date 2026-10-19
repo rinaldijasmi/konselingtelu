@@ -342,6 +342,7 @@
       }
 
       const panduCache = new Map();
+      const omniCache = new Map();
 
       function panduScaleList(scales, labels) {
         const entries = Object.entries(scales || {});
@@ -353,10 +354,10 @@
         }).join("")}</div>`;
       }
 
-      function panduHtml(result) {
+      function panduHtml(result, testName = "PANDU") {
         const { PD_LABELS, FACTOR_LABELS, VALIDITY_LABELS, NORMAL_LABELS } = window.PANDU_LABELS;
         if (!result.is_complete) {
-          return `<p class="pandu-note warn">Mahasiswa ini sudah mengisi tes PANDU tetapi belum lengkap (${escapeHtml(result.fill_status || "")}). Skor belum tersedia.</p>`;
+          return `<p class="pandu-note warn">Mahasiswa ini sudah mengisi tes ${testName} tetapi belum lengkap (${escapeHtml(result.fill_status || "")}). Skor belum tersedia.</p>`;
         }
         const review = result.pd_status === "Perlu telaah profesional";
         const resilience = result.resilience_index;
@@ -368,24 +369,28 @@
           <p class="pandu-note">Batang merah menandai T-score ≥ 70. Hasil skrining ini bukan diagnosis dan perlu ditelaah profesional.</p>`;
       }
 
-      async function renderPanduSection(detail, student) {
+      async function renderProfilingSection(detail, student, kind) {
+        const config = kind === "omni"
+          ? { title: "Hasil Tes OMNI", name: "OMNI", rpc: "counselor_omni_result" }
+          : { title: "Hasil profiling PANDU Tel-U", name: "PANDU", rpc: "counselor_pandu_result" };
         const title = document.createElement("h3");
         title.className = "section-title";
-        title.textContent = "Hasil profiling PANDU Tel-U";
+        title.textContent = config.title;
         const box = document.createElement("div");
         box.className = "pandu-box";
         box.innerHTML = '<p class="pandu-note">Memeriksa data profiling…</p>';
         detail.append(title, box);
         if (!student.nim) { box.innerHTML = '<p class="pandu-note">NIM mahasiswa tidak tersedia.</p>'; return; }
         try {
-          if (!panduCache.has(student.nim)) {
-            const { data, error } = await window.counselingBackend.getClient().rpc("counselor_pandu_result", { p_nim: student.nim });
+          const cache = kind === "omni" ? omniCache : panduCache;
+          if (!cache.has(student.nim)) {
+            const { data, error } = await window.counselingBackend.getClient().rpc(config.rpc, { p_nim: student.nim });
             if (error) throw error;
-            panduCache.set(student.nim, data);
+            cache.set(student.nim, data);
           }
           if (!box.isConnected) return;
-          const result = panduCache.get(student.nim);
-          box.innerHTML = result ? panduHtml(result) : '<p class="pandu-note">Belum ada hasil profiling PANDU untuk NIM ini.</p>';
+          const result = cache.get(student.nim);
+          box.innerHTML = result ? panduHtml(result, config.name) : `<p class="pandu-note">Belum ada hasil ${config.name} untuk NIM ini.</p>`;
         } catch (error) {
           if (box.isConnected) box.innerHTML = '<p class="pandu-note">Hasil profiling belum dapat dimuat. Pastikan fungsi database terbaru sudah dijalankan.</p>';
         }
@@ -435,7 +440,8 @@
           ["Alasan konseling", session.reason, true], ["Detail masalah", session.details, true]
         ].forEach(([label, value, wide]) => sessionFields.append(field(label, value, wide)));
         detail.append(sessionFields);
-        renderPanduSection(detail, student);
+        renderProfilingSection(detail, student, "pandu");
+        renderProfilingSection(detail, student, "omni");
         const privacy = document.createElement("p");
         privacy.className = "private-note";
         privacy.textContent = "Informasi mahasiswa bersifat rahasia. Gunakan hanya untuk pelayanan konseling dan pengisian laporan sesi.";

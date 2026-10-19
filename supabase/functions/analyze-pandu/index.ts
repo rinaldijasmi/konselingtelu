@@ -19,8 +19,11 @@ const VALIDITY_LABELS: Record<string, string> = { VRIN: "VRIN (Variable Response
 
 const LIST_SECTIONS = ["pertimbangan", "mencolok", "risiko", "kelebihan", "potensi"];
 
-const SYSTEM_PROMPT = `Kamu adalah asisten analisis untuk psikolog dan staf layanan konseling Direktorat Kemahasiswaan, Karier dan Alumni Telkom University.
-Kamu menerima skor tes PANDU Tel-U (Personality, Adaptability, and Resilience Diagnostic) seorang mahasiswa: skala validitas, normal scales, personality disorder (PD) scales, factor scales, dan indeks resiliensi 0-100. Skor skala adalah T-score (rata-rata 50, simpangan baku 10); T >= 70 dianggap tinggi/ditandai.
+const PANDU_INTRO = "skor tes PANDU Tel-U (Personality, Adaptability, and Resilience Diagnostic) seorang mahasiswa: skala validitas, normal scales, personality disorder (PD) scales, factor scales, dan indeks resiliensi 0-100";
+const OMNI_INTRO = "skor Hasil Tes OMNI seorang mahasiswa (bukan tes PANDU): skala validitas, normal scales, personality disorder (PD) scales, dan factor scales. Tes ini tidak memiliki skor resiliensi, jangan membahas resiliensi";
+
+const systemPrompt = (intro: string) => `Kamu adalah asisten analisis untuk psikolog dan staf layanan konseling Direktorat Kemahasiswaan, Karier dan Alumni Telkom University.
+Kamu menerima ${intro}. Skor skala adalah T-score (rata-rata 50, simpangan baku 10); T >= 70 dianggap tinggi/ditandai.
 Aturan:
 - Tulis dalam Bahasa Indonesia yang sederhana dan mudah dipahami admin non-psikolog. Hindari jargon; jika perlu istilah teknis, beri penjelasan singkat dalam kurung.
 - Ini hasil skrining, BUKAN diagnosis. Jangan memberi label diagnosis klinis. Gunakan bahasa hati-hati seperti "cenderung", "mengindikasikan", "perlu ditelaah".
@@ -84,21 +87,23 @@ Deno.serve(async request => {
   }
 
   let nim = "";
+  let source = "pandu";
   try {
     const body = await request.json();
     nim = typeof body?.nim === "string" ? body.nim.trim() : "";
+    if (body?.source === "omni") source = "omni";
   } catch {
     return fail("Invalid JSON body", 400);
   }
   if (!nim || nim.length > 40) return fail("NIM is required", 400);
 
   const { data: row, error: rowError } = await adminClient
-    .from("pandu_results")
-    .select("fill_status,is_complete,validity,normal_scales,pd_scales,factor_scales,pd_flag_count,pd_top_scale,pd_top_t,pd_status,resilience_index,resilience_score,program_study,faculty")
+    .from(source === "omni" ? "omni_results" : "pandu_results")
+    .select("fill_status,is_complete,validity,normal_scales,pd_scales,factor_scales,pd_flag_count,pd_top_scale,pd_top_t,pd_status,program_study,faculty" + (source === "omni" ? "" : ",resilience_index,resilience_score"))
     .eq("nim", nim)
     .maybeSingle();
-  if (rowError) return fail("Could not read the PANDU result", 500);
-  if (!row) return fail("Hasil PANDU tidak ditemukan", 404);
+  if (rowError) return fail("Could not read the profiling result", 500);
+  if (!row) return fail(source === "omni" ? "Hasil OMNI tidak ditemukan" : "Hasil PANDU tidak ditemukan", 404);
   if (!row.is_complete) return fail("Pengisian belum lengkap, analisis AI tidak tersedia", 422);
 
   // Nama dan NIM sengaja tidak dikirim ke penyedia AI.
@@ -115,7 +120,7 @@ Deno.serve(async request => {
       skala_tertinggi: row.pd_top_scale ? `${PD_LABELS[row.pd_top_scale] ?? row.pd_top_scale} (T=${row.pd_top_t})` : null,
       status_file_tes: row.pd_status
     },
-    resiliensi: { indeks_0_100: row.resilience_index, skor_total: row.resilience_score }
+    ...(source === "omni" ? {} : { resiliensi: { indeks_0_100: row.resilience_index, skor_total: row.resilience_score } })
   };
 
   const model = Deno.env.get("OPENAI_MODEL") ?? "gpt-4.1-mini";
@@ -129,7 +134,7 @@ Deno.serve(async request => {
         temperature: 0.3,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt(source === "omni" ? OMNI_INTRO : PANDU_INTRO) },
           { role: "user", content: `Analisis hasil profiling mahasiswa berikut:\n${JSON.stringify(payload)}` }
         ]
       }),

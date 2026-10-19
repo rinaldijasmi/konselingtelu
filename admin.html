@@ -42,6 +42,7 @@
         <p class="side-label">Profiling</p>
         <nav class="nav-list" aria-label="Menu profiling">
           <button class="nav-button" data-view="pandu" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/></svg><span>Profiling PANDU</span></button>
+          <button class="nav-button" data-view="omni" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/></svg><span>Profiling OMNI</span></button>
         </nav>
         <div class="sidebar-bottom"><strong id="accessRoleLabel">Akses administrator</strong><span id="accessRoleDescription">Data ditampilkan sesuai role admin akun yang sedang masuk.</span></div>
       </aside>
@@ -258,6 +259,39 @@
               <section class="panel report-detail" id="panduDetail" aria-live="polite"><div class="review-empty">Pilih mahasiswa untuk melihat profil PANDU.</div></section>
             </div>
           </section>
+          <section id="omniView" hidden>
+            <div class="heading-row"><div><h1>Profiling OMNI</h1><p class="heading-subtitle">Hasil Tes OMNI (bukan hasil OMNI Tel-U). Status penapisan mengikuti hasil di file tes; batang merah menandai T-score ≥ 70.</p></div><button class="primary-button" id="omniAddButton" type="button">Tambah data profiling</button></div>
+            <p class="directory-migration-notice" id="omniMigrationNotice" role="status" hidden>Tabel hasil OMNI belum tersedia. Jalankan <code>supabase/omni-profiling.sql</code> sesuai <code>SETUP-SUPABASE.md</code>.</p>
+            <div class="summary-grid">
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Mahasiswa terprofil</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="omniTotal">0</strong></div><div class="metric-note">Peserta unik berdasarkan NIM</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Pengisian lengkap</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="omniComplete">0</strong><span class="metric-change" id="omniCompleteRate"></span></div><div class="metric-note" id="omniIncompleteNote"></div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-label">Perlu telaah profesional</span><span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 4 3 20h18L12 4Zm0 6v4m0 3h.01"/></svg></span></div><div class="metric-value-row"><strong class="metric-value" id="omniReview">0</strong><span class="metric-change" id="omniReviewRate"></span></div><div class="metric-note">Dari pengisian lengkap</div></article>
+            </div>
+            <div class="distribution-grid pandu-distribution">
+              <section class="panel distribution-panel" aria-labelledby="omniTopHeading"><div class="panel-heading"><div><h2 id="omniTopHeading">Skala PD tertinggi</h2><p>Skala Personality Disorder dengan T-score tertinggi per mahasiswa</p></div></div><div class="bar-list" id="omniTopChart"></div></section>
+              <section class="panel distribution-panel" aria-labelledby="omniStatusHeading"><div class="panel-heading"><div><h2 id="omniStatusHeading">Status PD</h2><p>Hasil penapisan pada pengisian lengkap</p></div></div><div class="bar-list" id="omniStatusChart"></div></section>
+              <section class="panel distribution-panel" aria-labelledby="omniFlagHeading"><div class="panel-heading"><div><h2 id="omniFlagHeading">Jumlah skala PD ditandai</h2><p>Sesuai kolom “Jumlah PD ≥70” pada file hasil tes</p></div></div><div class="bar-list" id="omniFlagChart"></div></section>
+            </div>
+            <div class="report-layout">
+              <section class="panel" aria-labelledby="omniListHeading">
+                <div class="panel-heading"><div><h2 id="omniListHeading">Hasil per mahasiswa</h2><p id="omniListCount">Pilih mahasiswa untuk melihat profil lengkap.</p></div></div>
+                <div class="report-filters" aria-label="Filter hasil OMNI">
+                  <div class="report-filter-field"><label for="omniFacultyFilter">Fakultas</label><select id="omniFacultyFilter"><option value="">Semua fakultas</option></select></div>
+                  <div class="report-filter-field"><label for="omniProgramFilter">Program studi</label><select id="omniProgramFilter"><option value="">Semua program studi</option></select></div>
+                  <div class="report-filter-field"><label for="omniCohortFilter">Angkatan</label><select id="omniCohortFilter"><option value="">Semua angkatan</option></select></div>
+                  <div class="report-filter-field"><label for="omniFillFilter">Status pengisian</label><select id="omniFillFilter"><option value="">Semua</option><option value="complete">Lengkap</option><option value="incomplete">Belum lengkap</option></select></div>
+                  <div class="report-filter-field"><label for="omniStatusFilter">Status PD</label><select id="omniStatusFilter"><option value="">Semua</option><option value="review">Perlu telaah profesional</option><option value="clear">Tidak ada flag</option></select></div>
+                  <div class="report-filter-field"><label for="omniScaleFilter">Skala PD tertinggi</label><select id="omniScaleFilter"><option value="">Semua skala</option></select></div>
+                  <div class="report-filter-field"><label for="omniSort">Urutkan</label><select id="omniSort"><option value="name">Nama A–Z</option><option value="pd">T-score PD tertinggi</option></select></div>
+                  <button class="secondary-button" id="omniResetFilters" type="button">Reset filter</button>
+                </div>
+                <input class="report-search" id="omniSearch" type="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa berdasarkan nama atau NIM">
+                <div class="report-student-list" id="omniList"></div>
+                <button class="secondary-button pandu-more" id="omniMore" type="button" hidden>Tampilkan lebih banyak</button>
+              </section>
+              <section class="panel report-detail" id="omniDetail" aria-live="polite"><div class="review-empty">Pilih mahasiswa untuk melihat profil OMNI.</div></section>
+            </div>
+          </section>
         </div>
       </main>
     </div>
@@ -355,6 +389,65 @@
         </form>
       </section>
     </div>
+    <div class="approval-backdrop" id="omniImportBackdrop" hidden>
+      <section class="approval-modal pandu-import-modal" role="dialog" aria-modal="true" aria-labelledby="omniImportTitle">
+        <h2 id="omniImportTitle">Tambah data profiling</h2>
+        <p class="approval-intro">Unggah file Excel (.xlsx) atau CSV dengan format kolom yang sama seperti file OMNI sebelumnya. NIM yang sudah ada akan diperbarui, NIM baru akan ditambahkan.</p>
+        <div class="approval-fields">
+          <div class="approval-field"><label for="omniImportFile">File hasil Tes OMNI</label><input id="omniImportFile" type="file" accept=".xlsx,.xls,.csv"></div>
+          <button class="secondary-button pandu-template-button" id="omniTemplateButton" type="button">Unduh template Excel</button>
+        </div>
+        <div class="pandu-import-summary" id="omniImportSummary" aria-live="polite"></div>
+        <p class="approval-message" id="omniImportMessage" role="alert"></p>
+        <div class="approval-actions"><button class="secondary-button" id="omniImportCancel" type="button">Tutup</button><button class="primary-button" id="omniImportConfirm" type="button" disabled>Simpan data</button></div>
+      </section>
+    </div>
+
+    <div class="approval-backdrop" id="addSessionBackdrop" hidden>
+      <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="addSessionTitle">
+        <h2 id="addSessionTitle">Tambah sesi konseling</h2>
+        <p class="approval-intro">Buat jadwal terkonfirmasi untuk mahasiswa dan konselor. Sesi akan langsung muncul pada kalender kedua role.</p>
+        <form id="manualSessionForm">
+          <div class="approval-fields">
+            <div class="approval-field"><label for="manualStudentMode">Data mahasiswa</label><select id="manualStudentMode"><option value="registered">Mahasiswa terdaftar</option><option value="guest">Mahasiswa belum terdaftar</option></select></div>
+            <div class="approval-field" id="registeredStudentField"><label for="manualStudent">Mahasiswa</label><select id="manualStudent" required><option value="">Pilih mahasiswa</option></select></div>
+            <fieldset class="approval-fields wide manual-guest-fields" id="manualGuestFields" hidden>
+              <legend>Data mahasiswa baru (tanpa akun login)</legend>
+              <div class="approval-field"><label for="manualGuestName">Nama lengkap</label><input id="manualGuestName" autocomplete="name" required disabled></div>
+              <div class="approval-field"><label for="manualGuestNim">NIM</label><input id="manualGuestNim" inputmode="numeric" required disabled></div>
+              <div class="approval-field"><label for="manualGuestProgram">Program studi</label><input id="manualGuestProgram" required disabled></div>
+              <div class="approval-field"><label for="manualGuestFaculty">Fakultas</label><input id="manualGuestFaculty" required disabled></div>
+              <div class="approval-field"><label for="manualGuestPhone">WhatsApp mahasiswa</label><input id="manualGuestPhone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" required disabled></div>
+            </fieldset>
+            <div class="approval-field"><label for="manualCounselor">Konselor</label><select id="manualCounselor" required><option value="">Pilih konselor aktif</option></select></div>
+            <div class="approval-field"><label for="manualMode">Jenis konseling</label><select id="manualMode" required><option>Online</option><option>Tatap muka</option></select></div>
+            <div class="approval-field"><label for="manualDate">Tanggal</label><input id="manualDate" type="date" required></div>
+            <div class="approval-field"><label for="manualTime">Jam layanan</label><select id="manualTime" required></select></div>
+            <div class="approval-field"><label for="manualCategory">Kategori</label><select id="manualCategory" required><option>Akademik</option><option>Pribadi</option><option>Sosial</option><option>Keluarga</option><option>Karier</option><option>Lainnya</option></select></div>
+            <div class="approval-field" id="manualLocationField"><label for="manualLocation">Link Zoom</label><input id="manualLocation" type="url" placeholder="https://..." required></div>
+            <div class="approval-field"><label for="manualIssue">Masalah</label><input id="manualIssue" required></div>
+            <div class="approval-field"><label for="manualReason">Alasan konseling</label><input id="manualReason" required></div>
+            <div class="approval-field wide"><label for="manualDetails">Detail masalah</label><textarea id="manualDetails" required></textarea></div>
+          </div>
+          <p class="approval-message" id="manualSessionMessage" aria-live="polite"></p>
+          <div class="approval-actions"><button class="secondary-button" id="cancelAddSession" type="button">Batal</button><button class="primary-button" type="submit">Buat sesi</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="approval-backdrop" id="closeAppointmentBackdrop" hidden>
+      <section class="approval-modal" role="dialog" aria-modal="true" aria-labelledby="closeAppointmentTitle">
+        <h2 id="closeAppointmentTitle">Tutup sesi konseling</h2>
+        <p class="approval-intro" id="closeAppointmentSummary"></p>
+        <form id="closeAppointmentForm">
+          <div class="approval-fields">
+            <div class="approval-field wide"><label for="closeAppointmentStatus">Status akhir</label><select id="closeAppointmentStatus" required><option value="no_response">Tidak ada respons mahasiswa</option><option value="cancelled">Dibatalkan</option></select></div>
+            <div class="approval-field wide"><label for="closeAppointmentReason">Catatan admin (wajib)</label><textarea id="closeAppointmentReason" required minlength="3" maxlength="1000"></textarea></div>
+          </div>
+          <p class="approval-message" id="closeAppointmentMessage" aria-live="polite"></p>
+          <div class="approval-actions"><button class="secondary-button" id="cancelCloseAppointment" type="button">Kembali</button><button class="primary-button" type="submit">Simpan status</button></div>
+        </form>
+      </section>
+    </div>
     <div class="toast" id="toast" role="status" aria-live="polite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg><span id="toastMessage"></span></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -362,6 +455,7 @@
     <script src="assets/supabase.js"></script>
     <script src="assets/js/pandu-labels.js"></script>
     <script src="assets/js/admin-pandu.js"></script>
+    <script src="assets/js/admin-omni.js"></script>
     <script src="assets/js/admin.js"></script>
   </body>
 </html>

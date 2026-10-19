@@ -23,6 +23,7 @@ export default async function globalSetup() {
   const cleanup = async () => {
     await admin.from("appointments").delete().eq("student_id", accounts.student?.id ?? "00000000-0000-0000-0000-000000000000");
     await admin.from("counselor_directory").delete().eq("source_key", `uat-${tag}`);
+    await admin.from("omni_results").delete().like("nim", "99000000%");
     await admin.from("pandu_results").delete().in("nim", [TEST_NIM, "9900000002", "9900000003", "9900000004"]);
     for (const id of created) await admin.auth.admin.deleteUser(id);
   };
@@ -54,6 +55,16 @@ export default async function globalSetup() {
     resilience_score: 24, resilience_index: 52
   });
   if (pandu) throw new Error(`Gagal membuat data PANDU uji: ${pandu.message}`);
+  const { error: omni } = await admin.from("omni_results").upsert({
+    nim: TEST_NIM, full_name: TEST_NAME, program_study: "S1 Uji", faculty: "Fakultas Uji", cohort: "2026",
+    fill_status: "Lengkap", is_complete: true,
+    validity: { VRIN: 45, CD: 52 },
+    normal_scales: scales(["AE", "AM", "AN", "AS", "CO", "DE"], 45),
+    pd_scales: { PAR: 55, SCH: 48, SCT: 68, ANT: 50, BOR: 74, HIS: 47, NAR: 52, AVD: 66, DEP: 60, OBC: 49 },
+    factor_scales: scales(["AGRE", "CONC", "EXTR", "NARC", "NEUR", "OPEN", "SENS"], 47),
+    pd_flag_count: 1, pd_top_scale: "BOR", pd_top_t: 74, pd_status: "Perlu telaah profesional"
+  });
+  if (omni) throw new Error(`Gagal membuat data OMNI uji: ${omni.message}`);
 
   const { data: directory, error: directoryError } = await admin.from("counselor_directory").insert({
     source_key: `uat-${tag}`, full_name: accounts.counselor.name, specialties: ["UAT"],

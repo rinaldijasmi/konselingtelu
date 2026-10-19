@@ -86,6 +86,8 @@ Konselor mengatur hari, mode online/tatap muka, dan slot praktik dari tab **Kete
 
 Jalankan [`supabase/dummy-profiling.sql`](./supabase/dummy-profiling.sql) untuk mencoba menu Profiling. Isinya 60 mahasiswa dummy (NIM `DUMMY-PROF-001`–`060`, lima di antaranya belum lengkap) di PANDU dan OMNI, serta hasil lengkap untuk mahasiswa demo Nadia Putri (NIM `1202210031`) yang bisa dilihat konselor demo di halaman Jadwal. Aman dijalankan ulang; perintah penghapusan ada di akhir berkas.
 
+Untuk mengisi jadwal konselor demo, jalankan [`supabase/dummy-counselor-sessions.sql`](./supabase/dummy-counselor-sessions.sql) setelah skrip di atas. Skrip membuat entri direktori dan ketersediaan untuk Dr. Rani Putri serta 66 sesi (jam 09.00 dan 13.00) di setiap hari 5 Oktober–6 November 2026, memakai NIM `DUMMY-PROF-*` sehingga hasil PANDU dan OMNI muncul di halaman konselor.
+
 #### Data dummy jadwal untuk preview
 
 Untuk mencoba tampilan dengan data contoh, jalankan [`supabase/dummy-schedule-preview.sql`](./supabase/dummy-schedule-preview.sql) di SQL Editor setelah migrasi mahasiswa tamu, jadwal konselor, dan booking direktori. File mengimpor 191 sesi dengan tanggal 30 September–29 Oktober 2026, mempertahankan jam, konselor, media, serta status sumber. Nama/NIM/kontak mahasiswa dan seluruh detail konseling diganti nilai dummy. Data ini hanya untuk proyek preview/pengembangan, bukan produksi; sesi mendatang berstatus terjadwal akan menempati slot konselor terkait. Pengimporan aman dijalankan ulang dan melewati kode `DUMMY-XLSX-*` yang sudah ada. Data tersebut muncul sebagai mahasiswa tamu di akun admin, bukan sebagai riwayat mahasiswa pada akun mahasiswa asli.

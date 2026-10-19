@@ -449,6 +449,46 @@
     }
   }
 
+
+  async function downloadTemplate() {
+    const message = $("#panduImportMessage");
+    try {
+      await loadSheetLibrary();
+      const labels = window.PANDU_LABELS;
+      const headers = [
+        "No", "NIM / ID", "Nama", "Program Studi", "Fakultas", "Angkatan", "Status Pengisian",
+        ...Object.keys(labels.VALIDITY_LABELS), ...Object.keys(labels.NORMAL_LABELS),
+        ...Object.keys(labels.PD_LABELS), ...Object.keys(labels.FACTOR_LABELS),
+        "Jumlah PD ≥70", "Skala PD Tertinggi", "T-score PD Tertinggi", "Status PD", "Skor Resiliensi", "Indeks Resiliensi (0-100)"
+      ];
+      const notes = [
+        ["Petunjuk pengisian template PANDU Tel-U"],
+        ["1. Isi data mulai baris 2 pada sheet \"Data\". Jangan mengubah, menghapus, atau mengurutkan ulang judul kolom."],
+        ["2. NIM / ID dan Nama wajib diisi. Baris tanpa NIM atau nama dilewati."],
+        ["3. Status Pengisian: tulis persis \"Lengkap\" bila selesai, atau \"Belum lengkap (120/375)\" bila belum. Skor boleh kosong untuk yang belum lengkap."],
+        ["4. Skor skala berupa angka T-score (boleh desimal). Skala PD Tertinggi diisi kode skala, misalnya PAR."],
+        ["5. Status PD: \"Perlu telaah profesional\" atau isi sesuai file tes."],
+        ["6. NIM yang sudah ada akan diperbarui; NIM baru akan ditambahkan."],
+        [],
+        ["Contoh isi satu baris (jangan dimasukkan ke sheet Data kecuali sebagai format):"],
+        ["NIM / ID", "102012600225"], ["Nama", "Nama Mahasiswa"], ["Program Studi", "S1 Teknik Industri"],
+        ["Fakultas", "Fakultas Rekayasa Industri"], ["Angkatan", "2026"], ["Status Pengisian", "Lengkap"],
+        ["VRIN", "44.8"], ["PAR", "52.3"], ["Jumlah PD ≥70", "1"], ["Skala PD Tertinggi", "SCT"],
+        ["T-score PD Tertinggi", "72.1"], ["Status PD", "Perlu telaah profesional"], ["Indeks Resiliensi (0-100)", "46.9"]
+      ];
+      const workbook = window.XLSX.utils.book_new();
+      const data = window.XLSX.utils.aoa_to_sheet([headers]);
+      data["!cols"] = headers.map(name => ({ wch: Math.max(8, name.length + 2) }));
+      window.XLSX.utils.book_append_sheet(workbook, data, "Data");
+      const guide = window.XLSX.utils.aoa_to_sheet(notes);
+      guide["!cols"] = [{ wch: 28 }, { wch: 40 }];
+      window.XLSX.utils.book_append_sheet(workbook, guide, "Petunjuk");
+      window.XLSX.writeFile(workbook, "Template-Profiling-PANDU.xlsx");
+    } catch (error) {
+      message.textContent = error.message || "Template gagal dibuat.";
+    }
+  }
+  $("#panduTemplateButton").addEventListener("click", downloadTemplate);
   $("#panduAddButton").addEventListener("click", openImport);
   $("#panduImportCancel").addEventListener("click", closeImport);
   $("#panduImportBackdrop").addEventListener("click", event => { if (event.target.id === "panduImportBackdrop") closeImport(); });

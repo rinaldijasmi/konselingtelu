@@ -446,6 +446,7 @@
       .pandu-import-summary ul { margin: 6px 0 0; padding-left: 16px; }
       .pandu-import-summary .ok { color: var(--green); }
       .pandu-import-summary .warn { color: #a26500; }
+      .pandu-template-button { justify-self: start; }
       .pandu-import-modal { width: min(100%, 560px); }
       .pandu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
       .pandu-ai { margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }

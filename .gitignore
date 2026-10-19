@@ -5,3 +5,7 @@ supabase/.temp/
 .DS_Store
 supabase/private/
 __pycache__/
+node_modules/
+tests/uat/test-results/
+tests/uat/playwright-report/
+tests/uat/supabase/

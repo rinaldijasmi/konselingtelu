@@ -35,20 +35,18 @@ supabase secrets set APP_ORIGIN=http://localhost:8000 --project-ref YOUR_PROJECT
 Untuk hosting nanti, ganti `APP_ORIGIN` dengan origin HTTPS aplikasi tersebut.
 Pendaftaran staf melalui dashboard tidak mengirim email undangan. Pengguna mendapat kata sandi acak sementara saat akun dibuat dan harus menggantinya pada login pertama. Sampaikan kata sandi sementara melalui jalur aman; SMTP tidak dibutuhkan untuk alur ini.
 
-### Deploy ke GitHub Pages
+### Hosting Cloudflare
 
-Workflow `.github/workflows/pages.yml` menerbitkan halaman statis saat ada push ke branch `main`. Sebelum workflow berjalan, tambahkan konfigurasi di repository GitHub melalui **Settings → Secrets and variables → Actions**:
+Untuk aplikasi yang di-host di Cloudflare, buka proyek Supabase yang dipakai aplikasi (`rakqjbzbuctkzbgjueyu`) lalu pilih **Authentication → URL Configuration**:
 
-- Repository variable `SUPABASE_URL`: URL proyek Supabase.
-- Repository secret `SUPABASE_ANON_KEY`: anon/publishable key Supabase. Jangan gunakan service-role/secret key.
+- Isi **Site URL** dengan `https://konseling.kkatelkomuniversity.com`.
+- Tambahkan `https://konseling.kkatelkomuniversity.com/**` pada **Redirect URLs**. Pola ini menerima callback di halaman situs, termasuk redirect Cloudflare dari URL `.html` ke clean URL.
 
-Workflow membuat `assets/supabase-config.js` hanya di artifact deployment; file lokal dan key tidak dimasukkan ke Git. Di **Supabase → Authentication → URL Configuration**, tambahkan `https://rinaldijasmi.github.io/konselingtelu/` sebagai Site URL dan `https://rinaldijasmi.github.io/konselingtelu/**` ke Redirect URLs. Atur Edge Function secret `APP_ORIGIN` ke `https://rinaldijasmi.github.io` (origin tidak mencakup path `/konselingtelu`):
+Klik **Save changes**, lalu uji login dan alur yang memakai redirect email. Edge Function secret `APP_ORIGIN` sudah diarahkan ke origin Cloudflare (hanya domain, tanpa path). Jangan tambahkan GitHub Pages atau `localhost` sebagai origin produksi.
 
-```sh
-supabase secrets set APP_ORIGIN=https://rinaldijasmi.github.io
-```
+Cloudflare terhubung ke GitHub untuk deploy otomatis. Pastikan build Cloudflare menyediakan `assets/supabase-config.js` berisi Project URL dan anon/publishable key; jangan pernah menaruh service-role/secret key di frontend.
 
-Setelah konfigurasi GitHub dan Supabase siap, buka **Actions** dan jalankan ulang workflow bila push awal terjadi sebelum variable/secret disetel. Situs akan tersedia di `https://rinaldijasmi.github.io/konselingtelu/`.
+Workflow GitHub Pages sudah dihapus agar tidak menerbitkan ulang situs lama. Untuk menghentikan situs Pages yang sudah terbit, buka repository GitHub → **Settings → Pages**, lalu pilih **Unpublish site** bila tombol tersedia. Verifikasi alamat GitHub Pages lama tidak lagi menyajikan aplikasi. Secret dan variable Actions khusus Pages dapat dihapus setelah Cloudflare terverifikasi.
 
 Jalankan preview melalui server HTTP lokal, bukan membuka file HTML langsung. Contoh dari folder proyek:
 

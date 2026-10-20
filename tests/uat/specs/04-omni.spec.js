@@ -66,6 +66,13 @@ test.describe("Profiling OMNI (UI)", () => {
     await page.locator('.nav-button[data-view="omni"]').click();
     await expect(page.locator("#breadcrumbCurrent")).toContainText("OMNI");
     await expect(page.locator("#omniTotal")).not.toHaveText("0", { timeout: 180_000 });
+    await expect(page.locator("#omniList [data-omni-nim]")).toHaveCount(100);
+    await expect(page.locator("#omniPageInfo")).toContainText("Halaman 1");
+    await page.locator("#omniNext").click();
+    await expect(page.locator("#omniPageInfo")).toContainText("Halaman 2");
+    await expect(page.locator("#omniList [data-omni-nim]")).toHaveCount(100);
+    await page.locator("#omniPrevious").click();
+    await expect(page.locator("#omniPageInfo")).toContainText("Halaman 1");
     await expect(page.locator("#omniView")).not.toContainText("esiliensi");
 
     await page.locator("#omniSearch").fill(state().nim);

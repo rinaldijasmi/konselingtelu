@@ -287,7 +287,11 @@
                 </div>
                 <input class="report-search" id="omniSearch" type="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa berdasarkan nama atau NIM">
                 <div class="report-student-list" id="omniList"></div>
-                <button class="secondary-button pandu-more" id="omniMore" type="button" hidden>Tampilkan lebih banyak</button>
+                <div class="report-pagination" aria-label="Navigasi halaman OMNI">
+                  <button class="secondary-button" id="omniPrevious" type="button" disabled>Sebelumnya</button>
+                  <span id="omniPageInfo" aria-live="polite">Halaman 1</span>
+                  <button class="secondary-button" id="omniNext" type="button" disabled>Berikutnya</button>
+                </div>
               </section>
               <section class="panel report-detail" id="omniDetail" aria-live="polite"><div class="review-empty">Pilih mahasiswa untuk melihat profil OMNI.</div></section>
             </div>

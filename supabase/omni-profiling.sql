@@ -130,3 +130,71 @@ revoke all on function public.admin_upsert_omni_results(jsonb) from public, anon
 revoke all on function public.counselor_omni_result(text) from public, anon;
 grant execute on function public.admin_upsert_omni_results(jsonb) to authenticated;
 grant execute on function public.counselor_omni_result(text) to authenticated;
+
+-- Ringkasan kecil untuk dashboard admin; daftar detail diambil per halaman.
+create or replace function public.admin_omni_overview()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+set row_security = off
+as $$
+declare
+  result jsonb;
+begin
+  if not public.is_admin() then
+    raise exception 'Hanya admin yang dapat melihat ringkasan profiling' using errcode = '42501';
+  end if;
+
+  select jsonb_build_object(
+    'total', count(*),
+    'complete', count(*) filter (where is_complete),
+    'review', count(*) filter (where is_complete and pd_status = 'Perlu telaah profesional'),
+    'top_counts', coalesce((
+      select jsonb_agg(jsonb_build_array(pd_top_scale, n) order by n desc, pd_top_scale)
+      from (select pd_top_scale, count(*) n from public.omni_results where is_complete and pd_top_scale is not null group by pd_top_scale) grouped
+    ), '[]'::jsonb),
+    'status_counts', coalesce((
+      select jsonb_agg(jsonb_build_array(label, n) order by n desc, label)
+      from (
+        select coalesce(pd_status, 'Tidak tersedia') label, count(*) n
+        from public.omni_results where is_complete group by coalesce(pd_status, 'Tidak tersedia')
+      ) grouped
+    ), '[]'::jsonb),
+    'flag_counts', coalesce((
+      select jsonb_agg(jsonb_build_array(label, n) order by sort_order)
+      from (
+        select case
+          when pd_flag_count >= 4 then '4 skala atau lebih'
+          when pd_flag_count = 0 then 'Tidak ada'
+          else pd_flag_count::text || ' skala'
+        end label,
+        case when pd_flag_count >= 4 then 4 else coalesce(pd_flag_count, 5) end sort_order,
+        count(*) n
+        from public.omni_results
+        where is_complete and pd_flag_count is not null
+        group by 1, 2
+      ) grouped
+    ), '[]'::jsonb),
+    'faculties', coalesce((
+      select jsonb_agg(faculty order by faculty)
+      from (select distinct faculty from public.omni_results where faculty is not null and faculty <> '') as options
+    ), '[]'::jsonb),
+    'cohorts', coalesce((
+      select jsonb_agg(cohort order by cohort)
+      from (select distinct cohort from public.omni_results where cohort is not null and cohort <> '') as options
+    ), '[]'::jsonb),
+    'programs', coalesce((
+      select jsonb_agg(jsonb_build_object('faculty', faculty, 'program_study', program_study) order by faculty, program_study)
+      from (select distinct faculty, program_study from public.omni_results where program_study is not null and program_study <> '') as options
+    ), '[]'::jsonb)
+  ) into result
+  from public.omni_results;
+
+  return result;
+end;
+$$;
+
+revoke all on function public.admin_omni_overview() from public, anon;
+grant execute on function public.admin_omni_overview() to authenticated;

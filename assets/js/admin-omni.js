@@ -3,7 +3,7 @@
   const withCode = (labels, code) => labels[code] && labels[code] !== code ? `${labels[code]} (${code})` : code;
   const THRESHOLD = 70;
   const PAGE_SIZE = 100;
-  const MISSING_TABLE_CODES = ["42P01", "PGRST205"];
+  const MISSING_TABLE_CODES = ["42P01", "PGRST205", "PGRST202"];
 
   const $ = selector => document.querySelector(selector);
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
@@ -13,19 +13,10 @@
     ? "–"
     : Number(value).toLocaleString("id-ID", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
-  const state = { client: null, analyses: new Map(), rows: [], loaded: false, loading: false, selected: null, limit: PAGE_SIZE };
+  const state = { client: null, analyses: new Map(), rows: [], summary: null, loaded: false, loading: false, selected: null, page: 0, total: 0, request: 0 };
 
   const pdName = code => PD_LABELS[code] ? `${code} · ${PD_LABELS[code]}` : code;
   const hasReview = row => row.pd_status === "Perlu telaah profesional";
-
-  const countBy = (rows, labelFor) => {
-    const counts = new Map();
-    rows.forEach(row => {
-      const label = labelFor(row);
-      counts.set(label, (counts.get(label) || 0) + 1);
-    });
-    return counts;
-  };
 
   function barMarkup(entries, total) {
     if (!entries.length) return '<div class="review-empty">Belum ada data.</div>';
@@ -35,33 +26,24 @@
     }).join("");
   }
 
-  function renderSummary() {
-    const rows = state.rows;
-    const complete = rows.filter(row => row.is_complete);
-    const review = complete.filter(hasReview);
+  function renderSummary(summary) {
+    state.summary = summary;
     const percent = (part, whole) => whole ? `${Math.round(part / whole * 100)}%` : "";
 
-    $("#omniTotal").textContent = rows.length.toLocaleString("id-ID");
-    $("#omniComplete").textContent = complete.length.toLocaleString("id-ID");
-    $("#omniCompleteRate").textContent = percent(complete.length, rows.length);
-    $("#omniIncompleteNote").textContent = `${(rows.length - complete.length).toLocaleString("id-ID")} belum lengkap`;
-    $("#omniReview").textContent = review.length.toLocaleString("id-ID");
-    $("#omniReviewRate").textContent = percent(review.length, complete.length);
+    const complete = summary.complete || 0;
+    $("#omniTotal").textContent = Number(summary.total || 0).toLocaleString("id-ID");
+    $("#omniComplete").textContent = Number(complete).toLocaleString("id-ID");
+    $("#omniCompleteRate").textContent = percent(complete, summary.total || 0);
+    $("#omniIncompleteNote").textContent = `${Number((summary.total || 0) - complete).toLocaleString("id-ID")} belum lengkap`;
+    $("#omniReview").textContent = Number(summary.review || 0).toLocaleString("id-ID");
+    $("#omniReviewRate").textContent = percent(summary.review || 0, complete);
+    $("#omniTopChart").innerHTML = barMarkup((summary.top_counts || []).map(([code, count]) => [pdName(code), count]), complete);
+    $("#omniStatusChart").innerHTML = barMarkup(summary.status_counts || [], complete);
+    $("#omniFlagChart").innerHTML = barMarkup(summary.flag_counts || [], complete);
 
-    const topCounts = [...countBy(complete.filter(row => row.pd_top_scale), row => row.pd_top_scale)]
-      .sort((left, right) => right[1] - left[1])
-      .map(([code, count]) => [pdName(code), count]);
-    $("#omniTopChart").innerHTML = barMarkup(topCounts, complete.length);
-
-    const statusCounts = [...countBy(complete, row => row.pd_status || "Tidak tersedia")].sort((left, right) => right[1] - left[1]);
-    $("#omniStatusChart").innerHTML = barMarkup(statusCounts, complete.length);
-
-    const flagLabel = row => row.pd_flag_count >= 4 ? "4 skala atau lebih" : row.pd_flag_count === 0 ? "Tidak ada" : `${row.pd_flag_count} skala`;
-    const flagOrder = ["Tidak ada", "1 skala", "2 skala", "3 skala", "4 skala atau lebih"];
-    const flagCounts = countBy(complete.filter(row => row.pd_flag_count !== null), flagLabel);
-    $("#omniFlagChart").innerHTML = barMarkup(flagOrder.filter(label => flagCounts.has(label)).map(label => [label, flagCounts.get(label)]), complete.length);
-
-    fillFilterOptions();
+    setOptions($("#omniFacultyFilter"), "Semua fakultas", summary.faculties || []);
+    setOptions($("#omniCohortFilter"), "Semua angkatan", (summary.cohorts || []).reverse());
+    updateProgramOptions();
     const scaleFilter = $("#omniScaleFilter");
     const current = scaleFilter.value;
     scaleFilter.innerHTML = '<option value="">Semua skala</option>' + Object.keys(PD_LABELS)
@@ -69,59 +51,34 @@
     scaleFilter.value = current;
   }
 
-  const sortedUnique = (rows, key) => [...new Set(rows.map(row => row[key]).filter(Boolean))].sort((left, right) => left.localeCompare(right, "id"));
-
   function setOptions(select, placeholder, values) {
     const current = select.value;
     select.innerHTML = `<option value="">${placeholder}</option>` + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
     select.value = values.includes(current) ? current : "";
   }
 
-  function fillFilterOptions() {
-    setOptions($("#omniFacultyFilter"), "Semua fakultas", sortedUnique(state.rows, "faculty"));
-    setOptions($("#omniCohortFilter"), "Semua angkatan", sortedUnique(state.rows, "cohort").reverse());
-    updateProgramOptions();
-  }
-
   function updateProgramOptions() {
     const faculty = $("#omniFacultyFilter").value;
-    setOptions($("#omniProgramFilter"), "Semua program studi", sortedUnique(faculty ? state.rows.filter(row => row.faculty === faculty) : state.rows, "program_study"));
-  }
-
-  function filteredRows() {
-    const query = $("#omniSearch").value.trim().toLowerCase();
-    const fill = $("#omniFillFilter").value;
-    const status = $("#omniStatusFilter").value;
-    const scale = $("#omniScaleFilter").value;
-    const faculty = $("#omniFacultyFilter").value;
-    const program = $("#omniProgramFilter").value;
-    const cohort = $("#omniCohortFilter").value;
-    const rows = state.rows.filter(row =>
-      (!query || row.full_name.toLowerCase().includes(query) || row.nim.includes(query)) &&
-      (!fill || (fill === "complete") === row.is_complete) &&
-      (!status || (status === "review" ? hasReview(row) : row.pd_status === "Tidak ada flag")) &&
-      (!scale || row.pd_top_scale === scale) &&
-      (!faculty || row.faculty === faculty) &&
-      (!program || row.program_study === program) &&
-      (!cohort || row.cohort === cohort));
-    const sorters = {
-      name: (left, right) => left.full_name.localeCompare(right.full_name, "id"),
-      pd: (left, right) => (right.pd_top_t ?? -1) - (left.pd_top_t ?? -1),
-    };
-    return rows.sort(sorters[$("#omniSort").value] || sorters.name);
+    const programs = (state.summary?.programs || [])
+      .filter(item => !faculty || item.faculty === faculty)
+      .map(item => item.program_study)
+      .filter(Boolean);
+    setOptions($("#omniProgramFilter"), "Semua program studi", [...new Set(programs)].sort((a, b) => a.localeCompare(b, "id")));
   }
 
   function renderList() {
-    const rows = filteredRows();
-    const visible = rows.slice(0, state.limit);
-    $("#omniListCount").textContent = `${rows.length.toLocaleString("id-ID")} dari ${state.rows.length.toLocaleString("id-ID")} mahasiswa`;
-    $("#omniList").innerHTML = visible.length ? visible.map(row => {
+    const start = state.total ? state.page * PAGE_SIZE + 1 : 0;
+    const end = Math.min((state.page + 1) * PAGE_SIZE, state.total);
+    $("#omniListCount").textContent = `${start.toLocaleString("id-ID")}–${end.toLocaleString("id-ID")} dari ${state.total.toLocaleString("id-ID")} mahasiswa`;
+    $("#omniPageInfo").textContent = `Halaman ${(state.page + 1).toLocaleString("id-ID")} dari ${Math.max(1, Math.ceil(state.total / PAGE_SIZE)).toLocaleString("id-ID")}`;
+    $("#omniList").innerHTML = state.rows.length ? state.rows.map(row => {
       const badge = !row.is_complete
         ? '<span class="status-badge">Belum lengkap</span>'
         : hasReview(row) ? '<span class="status-badge confirmed">Perlu telaah</span>' : '<span class="status-badge done">Tidak ada flag</span>';
       return `<button class="report-student ${state.selected === row.nim ? "active" : ""}" data-omni-nim="${escapeHtml(row.nim)}" type="button"><strong>${escapeHtml(row.full_name)}</strong><span>${escapeHtml(row.nim)}${row.program_study ? ` · ${escapeHtml(row.program_study)}` : ""}${row.cohort ? ` · ${escapeHtml(row.cohort)}` : ""}${row.pd_top_scale ? ` · ${escapeHtml(row.pd_top_scale)} ${formatNumber(row.pd_top_t)}` : ""}</span>${badge}</button>`;
     }).join("") : '<div class="review-empty">Tidak ada mahasiswa yang cocok dengan filter.</div>';
-    $("#omniMore").hidden = rows.length <= state.limit;
+    $("#omniPrevious").disabled = state.page === 0;
+    $("#omniNext").disabled = end >= state.total;
   }
 
   function scaleRow(code, value, label) {
@@ -247,35 +204,66 @@
     };
   }
 
-  async function fetchAll(client) {
-    const rows = [];
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await client.from("omni_results").select("*").order("full_name").range(from, from + 999);
-      if (error) return { error };
-      rows.push(...data);
-      if (data.length < 1000) return { rows };
+  function buildPageQuery() {
+    let query = state.client.from("omni_results").select("*", { count: "exact" });
+    const search = $("#omniSearch").value.trim();
+    const escapedSearch = search.replace(/[\\%_"]/g, character => `\\${character}`);
+    if (search) query = query.or(`full_name.ilike."%${escapedSearch}%",nim.ilike."%${escapedSearch}%"`);
+    if ($("#omniFillFilter").value) query = query.eq("is_complete", $("#omniFillFilter").value === "complete");
+    if ($("#omniStatusFilter").value === "review") query = query.eq("pd_status", "Perlu telaah profesional");
+    if ($("#omniStatusFilter").value === "clear") query = query.eq("pd_status", "Tidak ada flag");
+    if ($("#omniScaleFilter").value) query = query.eq("pd_top_scale", $("#omniScaleFilter").value);
+    if ($("#omniFacultyFilter").value) query = query.eq("faculty", $("#omniFacultyFilter").value);
+    if ($("#omniProgramFilter").value) query = query.eq("program_study", $("#omniProgramFilter").value);
+    if ($("#omniCohortFilter").value) query = query.eq("cohort", $("#omniCohortFilter").value);
+    query = $("#omniSort").value === "pd"
+      ? query.order("pd_top_t", { ascending: false, nullsFirst: false }).order("full_name")
+      : query.order("full_name").order("nim");
+    return query.range(state.page * PAGE_SIZE, (state.page + 1) * PAGE_SIZE - 1);
+  }
+
+  async function loadPage(page = state.page) {
+    state.page = page;
+    const request = ++state.request;
+    $("#omniListCount").textContent = "Memuat halaman…";
+    $("#omniList").innerHTML = '<div class="review-empty">Memuat data…</div>';
+    const { data, error, count } = await buildPageQuery();
+    if (request !== state.request) return;
+    if (error) {
+      $("#omniListCount").textContent = `Data gagal dimuat: ${error.message}`;
+      $("#omniList").innerHTML = "";
+      return;
     }
+    state.rows = data || [];
+    state.total = count || 0;
+    renderList();
   }
 
   async function show(client) {
     if (client) state.client = client;
-    if (state.loaded || state.loading || !client) return;
+    if (state.loaded || state.loading || !state.client) return;
     state.loading = true;
     $("#omniListCount").textContent = "Memuat data…";
-    const { rows, error } = await fetchAll(client);
+    const [{ data: summary, error: summaryError }, pageResult] = await Promise.all([
+      state.client.rpc("admin_omni_overview"),
+      buildPageQuery(),
+    ]);
     state.loading = false;
+    const error = summaryError || pageResult.error;
     if (error) {
       const missing = MISSING_TABLE_CODES.includes(error.code);
       $("#omniMigrationNotice").hidden = !missing;
-      $("#omniListCount").textContent = missing ? "Tabel belum tersedia." : `Data gagal dimuat: ${error.message}`;
+      $("#omniListCount").textContent = missing ? "Fungsi/tabel OMNI belum tersedia. Jalankan supabase/omni-profiling.sql." : `Data gagal dimuat: ${error.message}`;
       return;
     }
-    state.rows = rows;
+    state.rows = pageResult.data || [];
+    state.total = pageResult.count || 0;
+    state.page = 0;
     state.loaded = true;
     $("#omniMigrationNotice").hidden = true;
-    renderSummary();
+    renderSummary(summary);
     renderList();
-    if (!rows.length) $("#omniListCount").textContent = "Belum ada data. Impor hasil OMNI sesuai SETUP-SUPABASE.md.";
+    if (!state.total) $("#omniListCount").textContent = "Belum ada data. Impor hasil OMNI sesuai SETUP-SUPABASE.md.";
   }
 
 
@@ -378,7 +366,12 @@
       const matrix = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
       const { records, skipped } = parseRecords(matrix);
       if (!records.length) throw new Error("Tidak ada baris data yang valid di file.");
-      const known = new Set(state.rows.map(row => row.nim));
+      const known = new Set();
+      for (let start = 0; start < records.length; start += 500) {
+        const { data, error } = await state.client.from("omni_results").select("nim").in("nim", records.slice(start, start + 500).map(record => record.nim));
+        if (error) throw error;
+        data.forEach(row => known.add(row.nim));
+      }
       const updated = records.filter(record => known.has(record.nim)).length;
       const incomplete = records.filter(record => !record.is_complete).length;
       importState.records = records;
@@ -412,12 +405,13 @@
       $("#omniImportBackdrop").hidden = true;
       state.analyses.clear();
       state.loaded = false;
+      state.page = 0;
       await show(state.client);
       $("#toastMessage").textContent = `${total.toLocaleString("id-ID")} data profiling berhasil disimpan.`;
       $("#toast").classList.add("show");
       setTimeout(() => $("#toast").classList.remove("show"), 3500);
     } catch (error) {
-      message.textContent = MISSING_TABLE_CODES.includes(error?.code) || error?.code === "PGRST202"
+      message.textContent = MISSING_TABLE_CODES.includes(error?.code)
         ? "Fungsi impor belum tersedia. Jalankan supabase/omni-profiling.sql."
         : `Gagal menyimpan: ${error?.message || "kesalahan tidak diketahui"}`;
       button.disabled = false;
@@ -473,18 +467,23 @@
   $("#omniImportFile").addEventListener("change", event => readImportFile(event.target.files[0]));
   $("#omniImportConfirm").addEventListener("click", saveImport);
 
-  const resetLimitAndRender = () => { state.limit = PAGE_SIZE; renderList(); };
-  ["#omniSearch"].forEach(selector => $(selector).addEventListener("input", resetLimitAndRender));
-  ["#omniFillFilter", "#omniStatusFilter", "#omniScaleFilter", "#omniCohortFilter", "#omniProgramFilter", "#omniSort"].forEach(selector => $(selector).addEventListener("change", resetLimitAndRender));
-  $("#omniFacultyFilter").addEventListener("change", () => { updateProgramOptions(); resetLimitAndRender(); });
+  let searchTimer;
+  const resetPageAndLoad = () => { clearTimeout(searchTimer); void loadPage(0); };
+  $("#omniSearch").addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => void loadPage(0), 300);
+  });
+  ["#omniFillFilter", "#omniStatusFilter", "#omniScaleFilter", "#omniCohortFilter", "#omniProgramFilter", "#omniSort"].forEach(selector => $(selector).addEventListener("change", resetPageAndLoad));
+  $("#omniFacultyFilter").addEventListener("change", () => { updateProgramOptions(); resetPageAndLoad(); });
   $("#omniResetFilters").addEventListener("click", () => {
     $("#omniSearch").value = "";
     ["#omniFillFilter", "#omniStatusFilter", "#omniScaleFilter", "#omniFacultyFilter", "#omniProgramFilter", "#omniCohortFilter"].forEach(selector => { $(selector).value = ""; });
     updateProgramOptions();
     $("#omniSort").value = "name";
-    resetLimitAndRender();
+    resetPageAndLoad();
   });
-  $("#omniMore").addEventListener("click", () => { state.limit += PAGE_SIZE; renderList(); });
+  $("#omniPrevious").addEventListener("click", () => { if (state.page > 0) void loadPage(state.page - 1); });
+  $("#omniNext").addEventListener("click", () => { if ((state.page + 1) * PAGE_SIZE < state.total) void loadPage(state.page + 1); });
   $("#omniList").addEventListener("click", event => {
     const button = event.target.closest("[data-omni-nim]");
     if (!button) return;

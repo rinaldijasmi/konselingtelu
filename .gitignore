@@ -9,3 +9,4 @@ node_modules/
 tests/uat/test-results/
 tests/uat/playwright-report/
 tests/uat/supabase/
+.wrangler/

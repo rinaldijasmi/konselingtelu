@@ -32,7 +32,7 @@ test.describe("Alur mahasiswa", () => {
     await loginViaUi(page, "student");
     for (const path of ["admin.html", "counselor.html"]) {
       await page.goto(path);
-      await page.waitForURL(/index\.html/, { timeout: 20_000 });
+      await page.waitForURL(/\/(index\.html)?(\?.*)?$/, { timeout: 20_000 });
       await expect(page.locator("#dashboard")).toBeVisible();
     }
   });

@@ -22,5 +22,5 @@ export async function loginViaUi(page, role) {
   await page.locator("#loginPassword").fill(accounts[role].password);
   await page.locator("#loginForm button[type=submit]").click();
   if (role === "student") await page.locator("#dashboard").waitFor({ state: "visible", timeout: 30_000 });
-  else await page.waitForURL(new RegExp(`${role}\\.html`), { timeout: 30_000 });
+  else await page.waitForURL(new RegExp(`/${role}(\\.html)?(\\?.*)?$`), { timeout: 30_000 });
 }

@@ -26,7 +26,7 @@ test.describe("Publik & keamanan dasar", () => {
   for (const path of ["admin.html", "counselor.html"]) {
     test(`${path} tanpa login diarahkan ke halaman masuk`, async ({ page }) => {
       await page.goto(path);
-      await page.waitForURL(/index\.html/, { timeout: 20_000 });
+      await page.waitForURL(/\/(index\.html)?(\?.*)?$/, { timeout: 20_000 });
       await expect(page.locator("#loginForm")).toBeVisible();
     });
   }

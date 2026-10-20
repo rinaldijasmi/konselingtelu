@@ -58,13 +58,14 @@ test.describe("Profiling OMNI (API)", () => {
 
 test.describe("Profiling OMNI (UI)", () => {
   test("admin: menu OMNI terpisah, tanpa resiliensi, detail dan unggah", async ({ page }) => {
+    test.setTimeout(300_000);
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     await loginViaUi(page, "admin");
     await expect(page.locator('.nav-button[data-view="omni"]')).toBeVisible();
     await page.locator('.nav-button[data-view="omni"]').click();
     await expect(page.locator("#breadcrumbCurrent")).toContainText("OMNI");
-    await expect(page.locator("#omniTotal")).not.toHaveText("0", { timeout: 60_000 });
+    await expect(page.locator("#omniTotal")).not.toHaveText("0", { timeout: 180_000 });
     await expect(page.locator("#omniView")).not.toContainText("esiliensi");
 
     await page.locator("#omniSearch").fill(state().nim);

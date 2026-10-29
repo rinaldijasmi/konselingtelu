@@ -22,6 +22,9 @@ create table if not exists public.pandu_results (
   pd_status text,
   resilience_score numeric,
   resilience_index numeric,
+  vulnerability_status text,
+  omni_cluster text,
+  omni_cluster_name text,
   imported_at timestamptz not null default now()
 );
 
@@ -31,6 +34,9 @@ alter table public.pandu_results add column if not exists faculty text;
 alter table public.pandu_results add column if not exists cohort text;
 alter table public.pandu_results add column if not exists resilience_score numeric;
 alter table public.pandu_results add column if not exists resilience_index numeric;
+alter table public.pandu_results add column if not exists vulnerability_status text;
+alter table public.pandu_results add column if not exists omni_cluster text;
+alter table public.pandu_results add column if not exists omni_cluster_name text;
 alter table public.pandu_results drop column if exists resilience_items;
 
 alter table public.pandu_results enable row level security;

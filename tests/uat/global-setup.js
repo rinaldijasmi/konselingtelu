@@ -47,6 +47,7 @@ export default async function globalSetup() {
   const { error: pandu } = await admin.from("pandu_results").upsert({
     nim: TEST_NIM, full_name: TEST_NAME, program_study: "S1 Uji", faculty: "Fakultas Uji", cohort: "2026",
     fill_status: "Lengkap", is_complete: true,
+    vulnerability_status: "Rentan", omni_cluster: "Kuning", omni_cluster_name: "Perlu Pembinaan",
     validity: { VRIN: 45, CD: 52 },
     normal_scales: scales(["AE", "AM", "AN", "AS", "CO", "DE"], 45),
     pd_scales: { PAR: 55, SCH: 48, SCT: 72, ANT: 50, BOR: 58, HIS: 47, NAR: 52, AVD: 66, DEP: 60, OBC: 49 },
@@ -58,6 +59,7 @@ export default async function globalSetup() {
   const { error: omni } = await admin.from("omni_results").upsert({
     nim: TEST_NIM, full_name: TEST_NAME, program_study: "S1 Uji", faculty: "Fakultas Uji", cohort: "2026",
     fill_status: "Lengkap", is_complete: true,
+    vulnerability_status: "Rentan", omni_cluster: "Kuning", omni_cluster_name: "Perlu Pembinaan",
     validity: { VRIN: 45, CD: 52 },
     normal_scales: scales(["AE", "AM", "AN", "AS", "CO", "DE"], 45),
     pd_scales: { PAR: 55, SCH: 48, SCT: 68, ANT: 50, BOR: 74, HIS: 47, NAR: 52, AVD: 66, DEP: 60, OBC: 49 },

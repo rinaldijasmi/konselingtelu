@@ -17,6 +17,11 @@
 
   const pdName = code => PD_LABELS[code] ? `${code} · ${PD_LABELS[code]}` : code;
   const hasReview = row => row.pd_status === "Perlu telaah profesional";
+  const vulnerabilityBadge = row => {
+    if (!row.omni_cluster_name || !row.omni_cluster) return "";
+    const color = row.omni_cluster === "Kuning" ? "yellow" : row.omni_cluster === "Merah" ? "red" : "neutral";
+    return `<span class="omni-cluster-badge ${color}" title="Klasifikasi kerentanan OMNI · Klaster ${escapeHtml(row.omni_cluster)}">${escapeHtml(row.omni_cluster_name)}</span>`;
+  };
 
   const countBy = (rows, labelFor) => {
     const counts = new Map();
@@ -199,7 +204,7 @@
     const incompleteNote = row.is_complete ? "" : `<p class="pandu-callout warn">Pengisian belum lengkap (${escapeHtml(row.fill_status.replace("Belum lengkap", "").trim() || "–")} butir). Skor skala validitas, normal, PD, dan faktor belum tersedia.</p>`;
     const reviewCallout = row.is_complete ? `<p class="pandu-callout ${hasReview(row) ? "alert" : "ok"}"><strong>${escapeHtml(row.pd_status || "Tidak tersedia")}</strong> · ${row.pd_flag_count ?? 0} skala PD ditandai${row.pd_top_scale ? ` · tertinggi ${escapeHtml(pdName(row.pd_top_scale))} (${formatNumber(row.pd_top_t)})` : ""}</p>` : "";
     $("#panduDetail").innerHTML = `
-      <div class="report-student-heading"><div><h2>${escapeHtml(row.full_name)}</h2><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p><p>${[row.program_study, row.faculty, row.cohort ? `Angkatan ${row.cohort}` : ""].filter(Boolean).map(escapeHtml).join(" · ") || "Program studi belum tercatat"}</p></div>${row.is_complete ? '<div class="pandu-actions"><button class="secondary-button" data-pandu-print type="button">Cetak hasil</button><button class="primary-button" data-pandu-ai type="button">Analisis Hasil dengan AI</button></div>' : ""}</div>
+      <div class="report-student-heading"><div><div class="report-name-line"><h2>${escapeHtml(row.full_name)}</h2>${vulnerabilityBadge(row)}</div><p>NIM ${escapeHtml(row.nim)} · ${escapeHtml(row.fill_status)}</p><p>${[row.program_study, row.faculty, row.cohort ? `Angkatan ${row.cohort}` : ""].filter(Boolean).map(escapeHtml).join(" · ") || "Program studi belum tercatat"}</p></div>${row.is_complete ? '<div class="pandu-actions"><button class="secondary-button" data-pandu-print type="button">Cetak hasil</button><button class="primary-button" data-pandu-ai type="button">Analisis Hasil dengan AI</button></div>' : ""}</div>
       ${incompleteNote}${reviewCallout}
       <section class="pandu-ai" id="panduAiPanel" hidden></section>
       <section class="pandu-group"><h3>Resiliensi</h3>
@@ -360,7 +365,10 @@
         pd_top_t: cellNumber(get(row, "T-score PD Tertinggi")),
         pd_status: optionalText(get(row, "Status PD")),
         resilience_score: cellNumber(get(row, "Skor Resiliensi")),
-        resilience_index: cellNumber(get(row, "Indeks Resiliensi (0-100)"))
+        resilience_index: cellNumber(get(row, "Indeks Resiliensi (0-100)")),
+        vulnerability_status: optionalText(get(row, "Status Kerentanan")),
+        omni_cluster: optionalText(get(row, "Klaster")),
+        omni_cluster_name: optionalText(get(row, "Nama Klaster"))
       };
       for (const [key, scales] of Object.entries(groups)) {
         record[key] = Object.fromEntries(scales
@@ -396,8 +404,14 @@
     try {
       await loadSheetLibrary();
       const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const matrix = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+      const sheetName = workbook.SheetNames.find(name => {
+        const rows = window.XLSX.utils.sheet_to_json(workbook.Sheets[name], {
+          header: 1, range: { s: { r: 0, c: 0 }, e: { r: 5, c: 99 } }, raw: true, defval: ""
+        });
+        return rows.some(row => row.some(cell => cellText(cell) === "NIM / ID"));
+      });
+      if (!sheetName) throw new Error('Sheet dengan kolom "NIM / ID" tidak ditemukan.');
+      const matrix = window.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: true, defval: "" });
       const { records, skipped } = parseRecords(matrix);
       if (!records.length) throw new Error("Tidak ada baris data yang valid di file.");
       const known = new Set(state.rows.map(row => row.nim));
@@ -459,7 +473,8 @@
         "No", "NIM / ID", "Nama", "Program Studi", "Fakultas", "Angkatan", "Status Pengisian",
         ...Object.keys(labels.VALIDITY_LABELS), ...Object.keys(labels.NORMAL_LABELS),
         ...Object.keys(labels.PD_LABELS), ...Object.keys(labels.FACTOR_LABELS),
-        "Jumlah PD ≥70", "Skala PD Tertinggi", "T-score PD Tertinggi", "Status PD", "Skor Resiliensi", "Indeks Resiliensi (0-100)"
+        "Jumlah PD ≥70", "Skala PD Tertinggi", "T-score PD Tertinggi", "Status PD", "Skor Resiliensi", "Indeks Resiliensi (0-100)",
+        "Status Kerentanan", "Klaster", "Nama Klaster"
       ];
       const notes = [
         ["Petunjuk pengisian template PANDU Tel-U"],
@@ -468,7 +483,8 @@
         ["3. Status Pengisian: tulis persis \"Lengkap\" bila selesai, atau \"Belum lengkap (120/375)\" bila belum. Skor boleh kosong untuk yang belum lengkap."],
         ["4. Skor skala berupa angka T-score (boleh desimal). Skala PD Tertinggi diisi kode skala, misalnya PAR."],
         ["5. Status PD: \"Perlu telaah profesional\" atau isi sesuai file tes."],
-        ["6. NIM yang sudah ada akan diperbarui; NIM baru akan ditambahkan."],
+        ["6. Klasifikasi kerentanan OMNI diisi melalui kolom Status Kerentanan, Klaster, dan Nama Klaster bila tersedia."],
+        ["7. NIM yang sudah ada akan diperbarui; NIM baru akan ditambahkan."],
         [],
         ["Contoh isi satu baris (jangan dimasukkan ke sheet Data kecuali sebagai format):"],
         ["NIM / ID", "102012600225"], ["Nama", "Nama Mahasiswa"], ["Program Studi", "S1 Teknik Industri"],

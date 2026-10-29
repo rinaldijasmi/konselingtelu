@@ -19,9 +19,15 @@ create table if not exists public.omni_results (
   pd_top_scale text,
   pd_top_t numeric,
   pd_status text,
+  vulnerability_status text,
+  omni_cluster text,
+  omni_cluster_name text,
   imported_at timestamptz not null default now()
 );
 
+alter table public.omni_results add column if not exists vulnerability_status text;
+alter table public.omni_results add column if not exists omni_cluster text;
+alter table public.omni_results add column if not exists omni_cluster_name text;
 
 alter table public.omni_results enable row level security;
 revoke all on public.omni_results from anon, public;
@@ -59,18 +65,21 @@ begin
   insert into public.omni_results (
     nim, full_name, program_study, faculty, cohort, fill_status, answered_items, total_items, is_complete,
     validity, normal_scales, pd_scales, factor_scales,
-    pd_flag_count, pd_top_scale, pd_top_t, pd_status
+    pd_flag_count, pd_top_scale, pd_top_t, pd_status,
+    vulnerability_status, omni_cluster, omni_cluster_name
   )
   select
     left(btrim(r.nim), 40), left(btrim(r.full_name), 200), left(r.program_study, 200), left(r.faculty, 200), left(r.cohort, 20),
     left(coalesce(r.fill_status, ''), 80), r.answered_items, r.total_items, coalesce(r.is_complete, false),
     coalesce(r.validity, '{}'::jsonb), coalesce(r.normal_scales, '{}'::jsonb), coalesce(r.pd_scales, '{}'::jsonb), coalesce(r.factor_scales, '{}'::jsonb),
-    r.pd_flag_count, left(r.pd_top_scale, 20), r.pd_top_t, left(r.pd_status, 80)
+    r.pd_flag_count, left(r.pd_top_scale, 20), r.pd_top_t, left(r.pd_status, 80),
+    left(r.vulnerability_status, 80), left(r.omni_cluster, 40), left(r.omni_cluster_name, 120)
   from jsonb_to_recordset(p_rows) as r(
     nim text, full_name text, program_study text, faculty text, cohort text, fill_status text,
     answered_items integer, total_items integer, is_complete boolean,
     validity jsonb, normal_scales jsonb, pd_scales jsonb, factor_scales jsonb,
-    pd_flag_count integer, pd_top_scale text, pd_top_t numeric, pd_status text
+    pd_flag_count integer, pd_top_scale text, pd_top_t numeric, pd_status text,
+    vulnerability_status text, omni_cluster text, omni_cluster_name text
   )
   where nullif(btrim(r.nim), '') is not null and nullif(btrim(r.full_name), '') is not null
   on conflict (nim) do update set
@@ -79,7 +88,8 @@ begin
     total_items = excluded.total_items, is_complete = excluded.is_complete, validity = excluded.validity,
     normal_scales = excluded.normal_scales, pd_scales = excluded.pd_scales, factor_scales = excluded.factor_scales,
     pd_flag_count = excluded.pd_flag_count, pd_top_scale = excluded.pd_top_scale, pd_top_t = excluded.pd_top_t,
-    pd_status = excluded.pd_status, imported_at = now()
+    pd_status = excluded.pd_status, vulnerability_status = excluded.vulnerability_status,
+    omni_cluster = excluded.omni_cluster, omni_cluster_name = excluded.omni_cluster_name, imported_at = now()
   -- Hasil lengkap tidak boleh tertimpa data yang belum lengkap.
   where excluded.is_complete or not public.omni_results.is_complete;
 

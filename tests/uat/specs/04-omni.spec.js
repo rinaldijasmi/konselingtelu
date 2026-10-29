@@ -7,6 +7,7 @@ import { anonClient, loginViaUi, signedInClient, state } from "../helpers.js";
 
 const omniRow = nim => ({
   nim, full_name: "UAT Impor OMNI", program_study: "S1 Uji", faculty: "Fakultas Uji", cohort: "2026",
+  vulnerability_status: "Rentan", omni_cluster: "Merah", omni_cluster_name: "Perlu Pendampingan",
   fill_status: "Lengkap", is_complete: true, validity: { VRIN: 40 }, normal_scales: { AE: 50 },
   pd_scales: { PAR: 50 }, factor_scales: { AGRE: 50 }, pd_flag_count: 0, pd_top_scale: "PAR", pd_top_t: 50, pd_status: "Tidak perlu telaah"
 });
@@ -80,6 +81,8 @@ test.describe("Profiling OMNI (UI)", () => {
     await expect(row).toBeVisible();
     await row.click();
     await expect(page.locator("#omniDetail")).toContainText(state().name);
+    await expect(page.locator("#omniDetail .omni-cluster-badge")).toHaveText("Perlu Pembinaan");
+    await expect(page.locator("#omniDetail .omni-cluster-badge")).toHaveClass(/yellow/);
     await expect(page.locator("#omniDetail")).not.toContainText("esiliensi");
     await expect(page.locator("#omniDetail [data-omni-print]")).toBeVisible();
 
@@ -91,15 +94,15 @@ test.describe("Profiling OMNI (UI)", () => {
     expect(download.suggestedFilename()).toBe("Template-Profiling-OMNI.xlsx");
 
     const csv = join(mkdtempSync(join(tmpdir(), "uat-")), "omni.csv");
-    const header = ["No", "NIM / ID", "Nama", "Program Studi", "Fakultas", "Angkatan", "Status Pengisian", "VRIN", "CD", "AE", "WR", "PAR", "OBC", "AGRE", "SENS", "Jumlah PD ≥70", "Skala PD Tertinggi", "T-score PD Tertinggi", "Status PD"];
-    const values = ["1", "9900000012", "UAT Unggah OMNI", "S1 Uji", "Fakultas Uji", "2026", "Lengkap", "44", "50", "52", "48", "55", "50", "49", "51", "0", "PAR", "55", "Tidak perlu telaah"];
+    const header = ["No", "NIM / ID", "Nama", "Program Studi", "Fakultas", "Angkatan", "Status Pengisian", "VRIN", "CD", "AE", "WR", "PAR", "OBC", "AGRE", "SENS", "Jumlah PD ≥70", "Skala PD Tertinggi", "T-score PD Tertinggi", "Status PD", "Status Kerentanan", "Klaster", "Nama Klaster"];
+    const values = ["1", "9900000012", "UAT Unggah OMNI", "S1 Uji", "Fakultas Uji", "2026", "Lengkap", "44", "50", "52", "48", "55", "50", "49", "51", "0", "PAR", "55", "Tidak perlu telaah", "Rentan", "Merah", "Perlu Pendampingan"];
     writeFileSync(csv, `${header.join(",")}\n${values.join(",")}\n`);
     await page.locator("#omniImportFile").setInputFiles(csv);
     await expect(page.locator("#omniImportSummary")).toContainText("1 mahasiswa siap disimpan", { timeout: 40_000 });
     await page.locator("#omniImportConfirm").click();
     await expect(page.locator("#omniImportBackdrop")).toBeHidden({ timeout: 40_000 });
-    const { data } = await serviceClient().from("omni_results").select("nim,full_name,is_complete").eq("nim", "9900000012").single();
-    expect(data).toMatchObject({ full_name: "UAT Unggah OMNI", is_complete: true });
+    const { data } = await serviceClient().from("omni_results").select("nim,full_name,is_complete,omni_cluster,omni_cluster_name").eq("nim", "9900000012").single();
+    expect(data).toMatchObject({ full_name: "UAT Unggah OMNI", is_complete: true, omni_cluster: "Merah", omni_cluster_name: "Perlu Pendampingan" });
     expect(errors).toEqual([]);
   });
 

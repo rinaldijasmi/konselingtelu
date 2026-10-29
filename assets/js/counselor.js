@@ -370,6 +370,12 @@
           <p class="pandu-note">Batang merah menandai T-score ≥ 70. Hasil skrining ini bukan diagnosis dan perlu ditelaah profesional.</p>`;
       }
 
+      function clusterBadgeHtml(result) {
+        if (!result?.omni_cluster || !result?.omni_cluster_name) return "";
+        const color = result.omni_cluster === "Kuning" ? "yellow" : result.omni_cluster === "Merah" ? "red" : "neutral";
+        return `<span class="omni-cluster-badge ${color}" title="Klasifikasi kerentanan OMNI · Klaster ${escapeHtml(result.omni_cluster)}">${escapeHtml(result.omni_cluster_name)}</span>`;
+      }
+
       async function renderProfilingSection(detail, student, kind) {
         const config = kind === "omni"
           ? { title: "Hasil Tes OMNI", name: "OMNI", rpc: "counselor_omni_result" }
@@ -391,6 +397,8 @@
           }
           if (!box.isConnected) return;
           const result = cache.get(student.nim);
+          const clusterBadge = detail.querySelector("#omniClassificationBadge");
+          if (clusterBadge && result) clusterBadge.innerHTML = clusterBadgeHtml(result);
           box.innerHTML = result ? panduHtml(result, config.name) : `<p class="pandu-note">Belum ada hasil ${config.name} untuk NIM ini.</p>`;
         } catch (error) {
           if (box.isConnected) box.innerHTML = '<p class="pandu-note">Hasil profiling belum dapat dimuat. Pastikan fungsi database terbaru sudah dijalankan.</p>';
@@ -408,7 +416,7 @@
         const heading = document.createElement("div");
         heading.className = "detail-heading";
         const title = document.createElement("div");
-        title.innerHTML = `<h2>${escapeHtml(student.name)}</h2><p>${escapeHtml(student.nim)} · ${escapeHtml(student.program)}</p>`;
+        title.innerHTML = `<div class="detail-name-line"><h2>${escapeHtml(student.name)}</h2><span id="omniClassificationBadge"></span></div><p>${escapeHtml(student.nim)} · ${escapeHtml(student.program)}</p>`;
         const badge = document.createElement("span");
         badge.className = "status";
         badge.textContent = session.status;

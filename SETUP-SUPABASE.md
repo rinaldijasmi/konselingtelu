@@ -140,8 +140,10 @@ Menu **Profiling PANDU** menampilkan hasil tes Personality, Adaptability, and Re
 
 Jalankan [`supabase/pandu-input-counselor-access.sql`](./supabase/pandu-input-counselor-access.sql) sekali di SQL Editor. File ini membuat dua fungsi:
 
-- `admin_upsert_pandu_results`: dipakai tombol **Tambah data profiling** (menu **Profiling → Profiling PANDU**). Admin mengunggah Excel/CSV berformat sama dengan file PANDU; NIM baru ditambahkan, NIM yang sudah ada diperbarui, dan hasil lengkap tidak tertimpa data yang belum lengkap.
+- `admin_upsert_pandu_results`: dipakai tombol **Tambah data profiling** (menu **Profiling → Profiling PANDU**). Admin mengunggah Excel/CSV berformat sama dengan file PANDU; importer mencari sheet yang memiliki kolom `NIM / ID`. NIM baru ditambahkan, NIM yang sudah ada diperbarui, dan hasil lengkap tidak tertimpa data yang belum lengkap.
 - `counselor_pandu_result`: dipakai halaman konselor. Konselor hanya bisa melihat hasil profiling mahasiswa yang punya pengajuan/sesi dengan dirinya (NIM harus ada di data profiling).
+
+Kolom opsional `Status Kerentanan`, `Klaster`, dan `Nama Klaster` menyimpan klasifikasi kerentanan OMNI. Jika ada nama klaster, halaman detail menampilkan label kecil di samping nama mahasiswa: warna kuning untuk klaster `Kuning` dan merah untuk klaster `Merah`. Jika klasifikasi tidak tersedia, label tidak ditampilkan.
 
 #### Analisis AI (tombol "Analisis Hasil dengan AI")
 

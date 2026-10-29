@@ -48,6 +48,8 @@ test.describe("Alur konselor", () => {
     await session.click();
     await expect(page.locator("#scheduleDetail")).toContainText(state().nim);
     await expect(page.locator("#scheduleDetail")).toContainText("Hasil profiling PANDU Tel-U");
+    await expect(page.locator("#scheduleDetail #omniClassificationBadge")).toContainText("Perlu Pembinaan", { timeout: 20_000 });
+    await expect(page.locator("#scheduleDetail #omniClassificationBadge .omni-cluster-badge")).toHaveClass(/yellow/);
     await expect(page.locator("#scheduleDetail .pandu-box").first()).toContainText("Perlu telaah profesional", { timeout: 20_000 });
     await expect(page.locator("#scheduleDetail .pandu-box").first()).toContainText("Schizotypal");
     await expect(page.locator("body")).not.toContainText("belum tersambung");
@@ -89,6 +91,8 @@ test.describe("Alur admin", () => {
     await expect(row).toBeVisible();
     await row.click();
     await expect(page.locator("#panduDetail")).toContainText(state().name);
+    await expect(page.locator("#panduDetail .omni-cluster-badge")).toHaveText("Perlu Pembinaan");
+    await expect(page.locator("#panduDetail .omni-cluster-badge")).toHaveClass(/yellow/);
     await expect(page.locator("#panduDetail")).toContainText("Resiliensi");
     await expect(page.locator("#panduDetail")).not.toContainText("Butir reverse");
     await expect(page.locator("#panduDetail [data-pandu-print]")).toBeVisible();
